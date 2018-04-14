@@ -1,0 +1,15 @@
+Think about normalisation and units and summed fluxes.
+
+rdisk estimates very high. - compare to data.
+
+change working directory when running code. output is clogging up coding folder
+
+Plot Mag vs HI FWHM as rdisk is perhaps not the most explanatory. 
+
+put in a test to check that the density at r1 is m_solar mass (although this is not a catch all test)
+
+checks done:
+
+Just check rotation interpolation for conservation of density -> accurate to below 0.1 %
+
+For low HI mass, sampling is worse ~ 2.5% of total flux
