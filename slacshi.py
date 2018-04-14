@@ -50,7 +50,6 @@ for ind, name in enumerate(src_names):
         summed_error = sampling_error.sum()
 
         mag = nonparametric_sim.calc_mag()
-        print 'magnification', mag
         parameter_tracking[sample] = [mag, rcmol, mhi, x_off, y_off, theta_20, theta_10, hidisk.rdisk_arcsec]
         flux_error_tracking[sample] = [orig_total_flux, sampled_unlensed_flux, summed_error]
     np.save('%s_parmtrack' % name, parameter_tracking)

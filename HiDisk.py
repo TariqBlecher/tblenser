@@ -41,10 +41,8 @@ class HiDisk(object):
         rdisk_array = np.logspace(log_rdisk_pc_range[0], log_rdisk_pc_range[1], 1000)
         turn_points = turning_points(function_to_minimise(rdisk_array, r1))
         rdisk_soln_pc = rdisk_array[turn_points[0][0]]
-        print 'rdisk = ', rdisk_soln_pc, 'pc'
         kpc_per_arcsec_src = cosmo.kpc_proper_per_arcmin(z_src).value / 60.
         rdisk_arcsec = rdisk_soln_pc*1e-3/kpc_per_arcsec_src
-        print 'rdisk', rdisk_arcsec, 'arcsec'
         return rdisk_arcsec
 
     def face_on_disk(self):
