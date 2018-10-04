@@ -2,6 +2,7 @@ import numpy as np
 import subprocess
 import pyfits as pf
 from astropy.cosmology import Planck15 as cosmo
+import sys
 
 
 class LensPoints(object):
@@ -20,8 +21,8 @@ class LensPoints(object):
         return {"omega": cosmo.Om0, "lambda": cosmo.Ode0, "hubble": (cosmo.H0.value / 100.),
                 "weos": -1.0,
                 "zl": zl, "prefix": self.prefix,
-                "xmin": -1 * length_arcsec / 2., "xmax": length_arcsec / 2.,
-                "ymin": -1 * length_arcsec / 2., "ymax": length_arcsec / 2.,
+                "xmin": -1 * length_arcsec / 2, "xmax": length_arcsec / 2,
+                "ymin": -1 * length_arcsec / 2, "ymax": length_arcsec / 2,
                 "pix_ext": pix_res, "srcfile": self.prefix + 'srcs.dat', 'flag_extnorm': 1,
                 'flag_srcsbin': 0, 'srcsbinsize': 0.2
                 }
@@ -34,9 +35,10 @@ class LensPoints(object):
                                               position_angle_deg_eastofnorth)
 
     def write_srcfile(self, src_image, threshold, length_arcsec, pix_res):
-        num_pix = length_arcsec / float(pix_res)
-        y_arcsec, x_arcsec = np.mgrid[-1 * length_arcsec / 2.:length_arcsec / 2.:1j * num_pix,
-                                      -1 * length_arcsec / 2.:length_arcsec / 2.:1j * num_pix]
+        num_pix = src_image.shape[0]
+        y_arcsec, x_arcsec = np.mgrid[-1 * length_arcsec / 2:length_arcsec / 2:1j * num_pix,
+                                      -1 * length_arcsec / 2:length_arcsec / 2:1j * num_pix]
+
         x_ind, y_ind = np.where(src_image/src_image.max() >= threshold)
 
         lines = []
@@ -45,11 +47,11 @@ class LensPoints(object):
             # # x pos, y pos, relative to lens which is at the center.
             # # e, theta_e set to zero. r_e set so that all the flux will be in 1 pixel
             lines.append('%f %f %f 0 0 %f 0.5 \n' % (src_image[x_ind[src_ind], y_ind[src_ind]],
-                                                         x_arcsec[x_ind[src_ind], y_ind[src_ind]],
-                                                         y_arcsec[x_ind[src_ind], y_ind[src_ind]],
-                                                    pix_res))
-
-        print 'number of srcs', len(lines)
+                                                     x_arcsec[x_ind[src_ind], y_ind[src_ind]],
+                                                     y_arcsec[x_ind[src_ind], y_ind[src_ind]],
+                                                     pix_res))
+        if len(lines) == 10000:
+            sys.exit('source sampling at GLAFIC limit of 10000 sources. Sources may be undersampled.')
         srcfile = open(self.prefix + 'srcs.dat', 'w')
         srcfile.writelines(lines)
         srcfile.close()
@@ -81,3 +83,10 @@ class LensPoints(object):
         original_image = pf.getdata(self.prefix + '_source.fits')
         lensed_image = pf.getdata(self.prefix + '_image.fits')
         return lensed_image.sum() / float(original_image.sum())
+
+    # def check_lensed_flux_within_image_bounds(self):
+    #     lensed_image = pf.getdata(self.prefix + '_image.fits')
+    #     peak_flux = lensed_image.max()
+    #     border_pixels = np.vstack((lensed_image[0, :], lensed_image[-1, :], lensed_image[0, :], lensed_image[-1, :]))
+    #     border_flux_fraction = border_pixels/peak_flux
+    #     if border_flux_fraction.max()>0.05:

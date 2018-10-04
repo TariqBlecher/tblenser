@@ -1,2 +1,0 @@
-src mhi z_src z_lens v_lens l_e theta_l
-J1106+5528 9.36 0.407 0.095 262 0.24 45.5

@@ -1,15 +1,19 @@
-Think about normalisation and units and summed fluxes.
-
-rdisk estimates very high. - compare to data.
 
 change working directory when running code. output is clogging up coding folder
 
-Plot Mag vs HI FWHM as rdisk is perhaps not the most explanatory. 
 
 put in a test to check that the density at r1 is m_solar mass (although this is not a catch all test)
+
+Parallelisation : 1105 vs 1305.. my first parallel implementation is slower than serial :(
+
+Sims - parralelising Ben says don't use threadpool for python code use NUMBA
 
 checks done:
 
 Just check rotation interpolation for conservation of density -> accurate to below 0.1 %
 
 For low HI mass, sampling is worse ~ 2.5% of total flux
+
+[optional] Photo-ionisation-flux thresholding. Talking with Josh. He says there is mixed evidence about photo ionisation. sometimes there seems to be a sharp edge and sometimes not. I suppose there are different UV backgrounds at different parts of the universe. Discussion of source thresholding. The way I'm doing it at the moment is only fine because I only consider magnification and not flux..but flux is actually slightly wrong now. I kind of want to turn off the normalisation anyway.
+
+

@@ -1,0 +1,25 @@
+zl 0.375 
+pix_ext 0.4 
+prefix test 
+pix_poi 0.4 
+xmin -40 
+ymin -40 
+omega 0.3075 
+hubble 0.6774 
+ymax 40 
+xmax 40 
+weos -1.0 
+lambda 0.6910098821161554 
+
+startup 3 1 0
+lens jaffe 596.000000 1.200000 -0.600000 0.260000 -11.000000 155.000000 6.000000
+lens jaffe 1316.000000 1.500000 27.300000 0.310000 -6.100000 155.000000 24.000000
+lens jaffe 194.000000 0.000000 0.000000 0.300000 -81.900000 8.000000 0.000000
+extend gauss 1.000000 1.000000 1.000000 9.000000 0.000000 0.000000 0.300000 0
+end_startup
+ 
+start_command
+writeimage
+writeimage_ori
+ 
+quit

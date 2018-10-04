@@ -1,5 +1,5 @@
 import numpy as np
-
+from astropy.cosmology import Planck15 as cosmo
 
 def sample_inclination_deg():
     success = 0
@@ -8,6 +8,9 @@ def sample_inclination_deg():
         trial = np.random.rand()
         if np.sin(inclination*np.pi/180.) > trial:
             success = 1
+
+    if inclination > 89.:
+        inclination = 89.
     return inclination
 
 
@@ -52,3 +55,11 @@ def turning_points(array):
             begin = i
             ps = s
     return idx_min, idx_max
+
+from scipy.constants import speed_of_light as c
+from astropy.cosmology import Planck15 as cosmo
+
+def einstein_radius(sig_sis_km_s, z_source, z_deflector):
+    D_ds = cosmo.angular_diameter_distance_z1z2(z_deflector,z_source).value
+    D_s = cosmo.angular_diameter_distance(z_source).value
+    return 4*np.pi * (sig_sis_km_s*1e3 / c) ** 2 * D_ds / D_s * 180 / np.pi * 3600

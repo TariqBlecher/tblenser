@@ -1,0 +1,49 @@
+
+glafic  ver. 1.2.8 (2016.10.28) by Masamune Oguri
+
+######## parameter definition
+omega    =  3.075000e-01
+lambda   =  6.910099e-01
+weos     =  -1.000000e+00
+hubble   =  6.774000e-01
+zl       =  3.750000e-01
+prefix   =  test
+xmin     =  -4.000000e+01
+ymin     =  -4.000000e+01
+xmax     =  4.000000e+01
+ymax     =  4.000000e+01
+pix_ext  =  4.000000e-01
+nx_ext   =  200
+ny_ext   =  200
+pix_poi  =  4.000000e-01
+nx_poi   =  200
+ny_poi   =  200
+maxlev   =  6
+
+
+######## startup
+lens   jaffe    5.960000e+02  1.200000e+00 -6.000000e-01  2.600000e-01 -1.100000e+01  1.550000e+02  6.000000e+00 
+lens   jaffe    1.316000e+03  1.500000e+00  2.730000e+01  3.100000e-01 -6.100000e+00  1.550000e+02  2.400000e+01 
+lens   jaffe    1.940000e+02  0.000000e+00  0.000000e+00  3.000000e-01 -8.190000e+01  8.000000e+00  0.000000e+00 
+extend gauss  1.0000  1.000000e+00  1.000000e+00  9.000000e+00  0.000000e+00  0.000000e+00  3.000000e-01  0.000000e+00 
+
+0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 
+
+######## run commands
+
+glafic> writeimage
+
+######## writing extended images (lensed)
+ sky = 0.000000e+00,  noise = 0.000000e+00
+ output file name = test_image.fits 
+
+glafic> writeimage_ori
+
+######## writing extended images (original)
+ sky = 0.000000e+00,  noise = 0.000000e+00
+ output file name = test_source.fits 
+
+glafic> quit
