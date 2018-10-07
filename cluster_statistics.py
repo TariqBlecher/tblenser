@@ -6,11 +6,10 @@ import time
 log = file('log.txt', 'w'); sys.stdout = log
 start = time.time()
 
-parm_file = 'sim_catalog.txt'
+parm_file = 'sim_catalog.npy'
 xdeflectfits = 'hlsp_frontier_model_abell2744_cats_v4.1_x-arcsec-deflect.fits'
 ydeflectfits = 'hlsp_frontier_model_abell2744_cats_v4.1_y-arcsec-deflect.fits'
-ra_image_mean, dec_image_mean, z_src, u_zsrc, mhi_log, u_mhi, ra_err_deg, dec_err_deg = \
-    np.swapaxes(np.loadtxt(parm_file, skiprows=1, dtype=float, usecols=(0, 1, 2, 3, 4, 5, 6, 7)), 0, 1)
+ra_image_mean, dec_image_mean, z_src, u_zsrc, mhi_log, u_mhi, ra_err_deg, dec_err_deg = np.load(parm_file)
 src_indices = np.arange(mhi_log.shape[0])
 
 defmap = DeflectionMap(xdeflect_fits=xdeflectfits, ydeflect_fits=ydeflectfits, center=False)
