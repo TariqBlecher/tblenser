@@ -3,7 +3,6 @@ import pyfits as pf
 from scipy.interpolate import RectBivariateSpline
 from astropy.cosmology import Planck15 as cosmo
 
-
 def setup_coordinate_grid(fits, inverse_ra_convention=False):
     header = pf.getheader(fits)
     pix_scale_arcsec = header['CDELT2']*3600.
@@ -41,6 +40,7 @@ class PositionGrid(object):
         self.y_arcsec, self.x_arcsec = setup_coordinate_grid(fits)
         self.npix = self.x_arcsec.shape[0]
         self.header = pf.getheader(fits)
+        self.pix_scale_arcsec = self.header['CDELT2']*3600.
         self.center = np.zeros(2)
         self.center[0] = self.header['CRVAL1']*3600.
         self.center[1] = self.header['CRVAL2']*3600.
@@ -67,10 +67,19 @@ class DeflectionMap(PositionGrid):
         print 'Deflection map init'
 
     def deflect_at_position(self, coordinate):
+        """
+        :param coordinate: Image coordinate, depending on whether the map was centered at initialisation
+        will determine if coordinate needs to be centered. Units are in arcsec
+        :return: value of deflection map at position in image plane
+        """
         pos_ind = self.position_index(coordinate)
         return np.hstack((self.xdeflect[pos_ind], self.ydeflect[pos_ind]))
 
     def deflect_at_positions(self, coordinates):
+        """
+        :param coordinates: array of coordinates in arcsec
+        :return: deflections in arcsec at coordinate positions
+        """
         deflections = np.zeros(coordinates.shape)
 
         for ind in range(coordinates.shape[1]):
@@ -78,7 +87,7 @@ class DeflectionMap(PositionGrid):
         return deflections
 
     def calc_source_positions(self, coordinates, z, ra_convention=-1, dec_convention=1):
-        """Calculate source positions for many coordinates"""
+        """Calculate source positions for many coordinates. coordinates have to be in array format"""
         source_coordinates = np.zeros(coordinates.shape)
         deflections = self.deflect_at_positions(coordinates) * lens_efficiency(z)
         source_coordinates[0, :] = coordinates[0, :] - ra_convention * deflections[0, :]
@@ -108,19 +117,21 @@ class DeflectionMap(PositionGrid):
         image = source_map_interp.ev(xmap.flatten()[::-1], ymap.flatten()).reshape(self.x_arcsec.shape, order='F')
         return image
 
-# class ReverseRayTracer(DeflectionMap):
-#     def __init__(self, xdeflect_fits, ydeflect_fits, z, center=True):
-#         DeflectionMap.__init__(self, xdeflect_fits, ydeflect_fits, center)
-#         lens_eff = lens_efficiency(z)
-#         self.xmap = self.x_arcsec + self.xdeflect*lens_eff
-#         self.ymap = self.y_arcsec - self.ydeflect*lens_eff
-#         print "ray tracer init"
-#
-#     def calc_image(self, source_fits):
-#         x, y = oned_coordinate_grid(source_fits)
-#         source_map_interp = RectBivariateSpline(x, y, pf.getdata(source_fits))
-#         image = source_map_interp.ev(self.xmap.flatten()[::-1], self.ymap.flatten()).reshape(self.x_arcsec.shape, order='F')
-#         return image
+    def calc_image_same_grid(self, sourcedata, z, write_image=True, imagename='image.npy'):
+        lens_eff = lens_efficiency(z)
+        xmap = self.x_arcsec + self.xdeflect*lens_eff
+        ymap = self.y_arcsec - self.ydeflect*lens_eff
+        x, y = oned_coordinate_grid(self.original_fits)
+        source_map_interp = RectBivariateSpline(x, y, sourcedata)
+        image = source_map_interp.ev(xmap.flatten()[::-1], ymap.flatten()).reshape(self.x_arcsec.shape, order='F')
+        if write_image:
+            np.save(imagename, image)
+        return image
+
+    def calc_magnification(self, sourcedata, z, write_image=False, imagename='test'):
+        image = self.calc_image_same_grid(sourcedata, z, write_image=write_image, imagename=imagename)
+        return image.sum()/sourcedata.sum()
+
 
 
 

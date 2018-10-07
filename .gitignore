@@ -2,3 +2,6 @@
 GLAFIC
 Notebooks/glafic
 code\ dump/
+*.npy
+.ipynb_checkpoints
+*.pyc
