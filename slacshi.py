@@ -46,12 +46,12 @@ for ind, name in enumerate(src_names):
         hidisk = HiDisk(n_pix=npix,
                         rcmol=rcmol, smoothing_height_pix=smoothing_height_pix,
                         theta_2_0=theta_20, theta_1_0=theta_10,
-                        x_off=x_off, y_off=y_off, log10_mhi=mhi, z_src=z_src[ind], grid_size_min_arcsec=grid_size_min)
+                        x_off_arcsec=x_off, y_off_arcsec=y_off, log10_mhi=mhi, z_src=z_src[ind], grid_size_min_arcsec=grid_size_min)
 
         prefix = name+'_%s' % sample
         nonparametric_sim = LensPoints(input_file_name=name + '.input', prefix=prefix,
                                        length_arcsec=hidisk.grid_length_arcsec,
-                                       pix_res=hidisk.pix_res, lens_v_sigma_kms=lens_v_sig,
+                                       pix_res=hidisk.pixel_scale_arcsec, lens_v_sigma_kms=lens_v_sig,
                                        lens_ellipticity=l_e[ind],
                                        lens_position_angle_deg_eastofnorth=l_theta_e[ind],
                                        lens_z=l_z[ind], source_data=hidisk.twod_disk,

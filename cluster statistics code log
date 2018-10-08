@@ -1,1 +1,7 @@
+HIDisk is taking toooo long. npix of cats grid is too large. need to rather just interpolate onto it.
+GOing back to the original hidisk, write to fits (try use astropy module), then calc image using the source fits.
+This will be nice and accurate too.
+
 Stellar mass uncertainties not properly done. using uniform sampling for now
+
+correct z sampling for being > cluster and < band end

@@ -108,28 +108,31 @@ class DeflectionMap(PositionGrid):
         interpydeflect = interpolatefunc_ydeflect.ev(nx.flatten(), ny.flatten()).reshape(nx.shape, order='F')
         return interpxdeflect, interpydeflect
 
-    def calc_image(self, source_fits, z):
+    def calc_image(self, source_fits, z, write_image=True, imagename='image.npy'):
+        """
+        :param source_fits: either an array then will use original header or new fits
+        :param z:
+        :param write_image:
+        :param imagename:
+        :return:
+        """
         lens_eff = lens_efficiency(z)
         xmap = self.x_arcsec + self.xdeflect*lens_eff
         ymap = self.y_arcsec - self.ydeflect*lens_eff
-        x, y = oned_coordinate_grid(source_fits)
-        source_map_interp = RectBivariateSpline(x, y, pf.getdata(source_fits))
-        image = source_map_interp.ev(xmap.flatten()[::-1], ymap.flatten()).reshape(self.x_arcsec.shape, order='F')
-        return image
+        if type(source_fits) == np.ndarray:
+            x, y = oned_coordinate_grid(self.original_fits)
+            source_map_interp = RectBivariateSpline(x, y, source_fits)
+        else:
+            x, y = oned_coordinate_grid(source_fits)
+            source_map_interp = RectBivariateSpline(x, y, pf.getdata(source_fits))
 
-    def calc_image_same_grid(self, sourcedata, z, write_image=True, imagename='image.npy'):
-        lens_eff = lens_efficiency(z)
-        xmap = self.x_arcsec + self.xdeflect*lens_eff
-        ymap = self.y_arcsec - self.ydeflect*lens_eff
-        x, y = oned_coordinate_grid(self.original_fits)
-        source_map_interp = RectBivariateSpline(x, y, sourcedata)
         image = source_map_interp.ev(xmap.flatten()[::-1], ymap.flatten()).reshape(self.x_arcsec.shape, order='F')
         if write_image:
             np.save(imagename, image)
         return image
 
     def calc_magnification(self, sourcedata, z, write_image=False, imagename='test'):
-        image = self.calc_image_same_grid(sourcedata, z, write_image=write_image, imagename=imagename)
+        image = self.calc_image(sourcedata, z, write_image=write_image, imagename=imagename)
         return image.sum()/sourcedata.sum()
 
 

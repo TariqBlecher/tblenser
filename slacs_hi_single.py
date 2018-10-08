@@ -22,11 +22,11 @@ theta_20 = 90
 hidisk = HiDisk(grid_length_arcsec=grid_length, n_pix=npix,
                 rcmol=rcmol, smoothing_height_pix=smoothing_height_pix,
                 theta_2_0=theta_20, theta_1_0=theta_10,
-                x_off=x_off, y_off=y_off, log10_mhi=mhi, z_src=z_src)
+                x_off_arcsec=x_off, y_off_arcsec=y_off, log10_mhi=mhi, z_src=z_src)
 
 nonparametric_sim = LensPoints(input_file_name='single.input', prefix='single',
                                length_arcsec=hidisk.grid_length_arcsec,
-                               pix_res=hidisk.pix_res,
+                               pix_res=hidisk.pixel_scale_arcsec,
                                lens_z=l_z, source_data=hidisk.twod_disk,
                                src_threshold=src_threshold, z_src=z_src)
 

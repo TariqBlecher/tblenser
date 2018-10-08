@@ -1,5 +1,5 @@
 from map_utils import *
-from HiDiskFrontier import *
+from HiDisk import *
 from utils import sample_inclination_deg
 import time
 
@@ -16,9 +16,10 @@ defmap = DeflectionMap(xdeflect_fits=xdeflectfits, ydeflect_fits=ydeflectfits, c
 n_samples_per_src = 1000
 rcmol_log_mean_sig = [-0.1, 0.3]
 mass_sampling = 'uniform'
+zcluster = 0.308
 
 for src_ind in src_indices:
-    parameter_tracking = np.zeros((n_samples_per_src, 9))
+    parameter_tracking = np.zeros((n_samples_per_src, 10))
     for sample in range(n_samples_per_src):
         if mass_sampling == 'uniform':
             mhi = np.random.rand()*2.5 + 8.5
@@ -27,23 +28,28 @@ for src_ind in src_indices:
         rcmol = np.random.lognormal(rcmol_log_mean_sig[0], rcmol_log_mean_sig[1])
         theta_10 = np.random.rand()*180.
         theta_20 = sample_inclination_deg()
-        z = np.random.normal(z_src[src_ind], u_zsrc[src_ind])
+        z = 0
+        nz = 0
+        while z < zcluster:
+            z = np.random.normal(z_src[src_ind], u_zsrc[src_ind])
+            nz += 1
 
         ra_image_arcsec = np.random.normal(loc=ra_image_mean[src_ind], scale=ra_err_deg[src_ind]) * 3600.
         dec_image_arcsec = np.random.normal(loc=dec_image_mean[src_ind], scale=dec_err_deg[src_ind]) * 3600.
         ra_image_arcsec_rel_to_defmap = ra_image_arcsec - defmap.center[0]
         dec_image_arcsec_rel_to_defmap = dec_image_arcsec - defmap.center[1]
         im_coord = np.array([ra_image_arcsec_rel_to_defmap, dec_image_arcsec_rel_to_defmap]).reshape((2, 1))
-        source_coord_arcsec_rel = defmap.calc_source_positions(im_coord, z)[:, 0]
-        source_coord_pix = source_coord_arcsec_rel / defmap.pix_scale_arcsec * np.array([-1, 1])
+        source_coord_arcsec_rel = defmap.calc_source_positions(im_coord, z)[:, 0] * np.array([-1, 1])
 
-        hidisk = HiDiskCluster(n_pix=defmap.npix, pix_res=defmap.pix_scale_arcsec, rcmol=rcmol, smoothing_height_pix=False,
-                               theta_2_0=theta_20, theta_1_0=theta_10, x_off=source_coord_pix[0], y_off=source_coord_pix[1],
-                               log10_mhi=mhi, z_src=z)
+        hidisk = HiDisk(rcmol=rcmol, smoothing_height_pix=False, theta_2_0=theta_20, theta_1_0=theta_10,
+                        log10_mhi=mhi, z_src=z, scale_by_rdisk=12, grid_size_min_arcsec=6, minpixelsizecheck=False)
 
-        mag = defmap.calc_magnification(hidisk.twod_disk, z, write_image=True, imagename='image_%s_%s' % (src_ind, sample))
+        hidisk.writeto_fits('hidisk_twodisk_%s_%s.fits', defmap.header, source_coord_arcsec_rel)
+
+        mag = defmap.calc_magnification(hidisk.twod_disk, z, write_image=True,
+                                        imagename='image_%s_%s' % (src_ind, sample))
         parameter_tracking[sample] = [mag, rcmol, mhi, ra_image_arcsec_rel_to_defmap, dec_image_arcsec_rel_to_defmap,
-                                      theta_20, theta_10, hidisk.rdisk_arcsec, z]
+                                      theta_20, theta_10, hidisk.rdisk_arcsec, z, nz]
         np.save('hidisk_twodisk_%s_%s' % (src_ind, sample), hidisk.twod_disk)
     np.save('%s_parmtrack' % src_ind, parameter_tracking)
 
