@@ -1,3 +1,7 @@
+
+HIDISC translation written in hdr. when calculating image onedgrid takes this into account to the calculated source grid
+However it seems like some or all the images are zero...check this though
+
 HIDisk is taking toooo long. npix of cats grid is too large. need to rather just interpolate onto it.
 GOing back to the original hidisk, write to fits (try use astropy module), then calc image using the source fits.
 This will be nice and accurate too.
@@ -5,3 +9,9 @@ This will be nice and accurate too.
 Stellar mass uncertainties not properly done. using uniform sampling for now
 
 correct z sampling for being > cluster and < band end
+
+
+just checked that all ASTRODEEP cut sources are within the cats map -> they are
+
+two weeks ago I compared the magnifications from the deflection map vs magnifications from the magnification map.
+I don't expect these to be exactly the same. They were not wildly different which was good,

@@ -3,6 +3,7 @@ import pyfits as pf
 from scipy.interpolate import RectBivariateSpline
 from astropy.cosmology import Planck15 as cosmo
 
+
 def setup_coordinate_grid(fits, inverse_ra_convention=False):
     header = pf.getheader(fits)
     pix_scale_arcsec = header['CDELT2']*3600.
@@ -18,13 +19,16 @@ def setup_coordinate_grid(fits, inverse_ra_convention=False):
     return y_arcsec, x_arcsec
 
 
-def oned_coordinate_grid(fits):
+def oned_coordinate_grid(fits, translate=False):
         fits_hdr = pf.getheader(fits)
         npix = fits_hdr['NAXIS1']
         dx = fits_hdr['CDELT2'] * 3600.
         radius = npix * dx / 2.
         x = np.linspace(-1 * radius, radius, npix)
         y = np.linspace(-1 * radius, radius, npix)
+        if translate:
+            x += fits_hdr['CRVAL1'] / 3600.
+            y += fits_hdr['CRVAL2'] / 3600,
         return x, y
 
 
@@ -94,6 +98,10 @@ class DeflectionMap(PositionGrid):
         source_coordinates[1, :] = coordinates[1, :] - dec_convention * deflections[1, :]
         return source_coordinates
 
+    def recenter_im_coord(self, coord_deg, coord_err_deg):
+        coord_image_arcsec = np.random.normal(loc=coord_deg, scale=coord_err_deg) * 3600. - self.center
+        return coord_image_arcsec.reshape((2, 1))
+
     def regrid(self, nfits):
         """
         Useful function to compare maps on different grids
@@ -120,10 +128,10 @@ class DeflectionMap(PositionGrid):
         xmap = self.x_arcsec + self.xdeflect*lens_eff
         ymap = self.y_arcsec - self.ydeflect*lens_eff
         if type(source_fits) == np.ndarray:
-            x, y = oned_coordinate_grid(self.original_fits)
+            x, y = oned_coordinate_grid(self.original_fits, translate=True)
             source_map_interp = RectBivariateSpline(x, y, source_fits)
         else:
-            x, y = oned_coordinate_grid(source_fits)
+            x, y = oned_coordinate_grid(source_fits, translate=True)
             source_map_interp = RectBivariateSpline(x, y, pf.getdata(source_fits))
 
         image = source_map_interp.ev(xmap.flatten()[::-1], ymap.flatten()).reshape(self.x_arcsec.shape, order='F')
@@ -133,7 +141,10 @@ class DeflectionMap(PositionGrid):
 
     def calc_magnification(self, sourcedata, z, write_image=False, imagename='test'):
         image = self.calc_image(sourcedata, z, write_image=write_image, imagename=imagename)
-        return image.sum()/sourcedata.sum()
+        if type(sourcedata) == np.ndarray:
+            return image.sum()/sourcedata.sum()
+        else:
+            return image.sum()/pf.getdata(sourcedata).sum()
 
 
 

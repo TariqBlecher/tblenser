@@ -1,6 +1,24 @@
 import numpy as np
 from astropy.cosmology import Planck15 as cosmo
 
+
+def mass_sampling(pdf='uniform', uniform_lower_bound=8.5, uniform_width=2.5, mean=9, sig=1):
+    if pdf == 'uniform':
+        mhi = np.random.rand()*uniform_width + uniform_lower_bound
+    elif pdf == 'normal':
+        mhi = np.log10(np.random.lognormal(np.log(10 ** mean), np.log(10 ** sig)))
+    return mhi
+
+
+def sample_check_z(z, u_z, z_cluster=0.308):
+        z = 0
+        nz = 0
+        while z < z_cluster:
+            z = np.random.normal(z, u_z)
+            nz += 1
+        return z, nz
+
+
 def sample_inclination_deg():
     success = 0
     while success == 0:

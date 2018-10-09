@@ -42,6 +42,9 @@ class HiDisk(object):
         self.roll_disk_pix((int(y_off_arcsec / self.pixel_scale_arcsec), int(x_off_arcsec / self.pixel_scale_arcsec)))
         self.twod_disk = np.sum(self.disk, axis=2)
 
+        # # Utility
+        self.fitsname = ''
+
     def solve_for_rdisk(self, log10_mhi, z_src=0.407, log_rdisk_pc_range=[2, 5]):
         def calc_r1(m_hi):
             """Jing Wang et al. 2016"""
@@ -87,9 +90,9 @@ class HiDisk(object):
         hdr['CDELT1'], hdr['CDELT2'] = np.array([-1, 1]) * self.pixel_scale_arcsec / 3600.
         hdr['NAXIS1'], hdr['NAXIS2'] = np.ones(2) * self.n_pix
         hdr['CRPIX1'], hdr['CRPIX2'] = np.ones(2) * self.n_pix / 2.
-        hdr['CRVAL1'], hdr['CRVAL2'] = ra_dec_arcsec_offset
-
-        pf.writeto(name, self.twod_disk, hdr)
+        hdr['CRVAL1'], hdr['CRVAL2'] = ra_dec_arcsec_offset / 3600.
+        pf.writeto(name, self.twod_disk, hdr, clobber=True)
+        self.fitsname = name
 
 
 
