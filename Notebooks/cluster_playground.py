@@ -32,7 +32,7 @@ class ClusterLens(object):
                 "zl": zl, "prefix": self.prefix,
                 "xmin": -1 * length_arcsec / 2, "xmax": length_arcsec / 2,
                 "ymin": -1 * length_arcsec / 2, "ymax": length_arcsec / 2,
-                "pix_ext": pix_res, "pix_poi":pix_res
+                "pix_ext": pix_res, "pix_poi": pix_res
                 }
 
     def add_sie(self, v_sigma_kms=600, x_offset=0, y_offset=0, ellipticity=0, position_angle_deg_eastofnorth=0):

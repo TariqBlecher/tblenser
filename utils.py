@@ -2,11 +2,11 @@ import numpy as np
 from astropy.cosmology import Planck15 as cosmo
 
 
-def mass_sampling(pdf='uniform', uniform_lower_bound=8.5, uniform_width=2.5, mean=9, sig=1):
+def mass_sampling(pdf='uniform', uniform_lower_bound=8.5, uniform_width=2.5, mass_mean_log10=9, mass_sig_log10=1):
     if pdf == 'uniform':
         mhi = np.random.rand()*uniform_width + uniform_lower_bound
     elif pdf == 'normal':
-        mhi = np.log10(np.random.lognormal(np.log(10 ** mean), np.log(10 ** sig)))
+        mhi = np.log10(np.random.lognormal(np.log(10 ** mass_mean_log10), np.log(10 ** mass_sig_log10)))
     return mhi
 
 

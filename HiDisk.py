@@ -45,7 +45,7 @@ class HiDisk(object):
         # # Utility
         self.fitsname = ''
 
-    def solve_for_rdisk(self, log10_mhi, z_src=0.407, log_rdisk_pc_range=[2, 5]):
+    def solve_for_rdisk(self, log10_mhi, z_src=0.407, log_rdisk_pc_range=None):
         def calc_r1(m_hi):
             """Jing Wang et al. 2016"""
             return 0.5 * 10**(0.506 * m_hi - 3.293)
@@ -56,7 +56,9 @@ class HiDisk(object):
             return np.power(self.mh / (2 * np.pi * r_disk ** 2) * np.exp(-r_1 / r_disk) /
                             (1 + self.Rcmol * np.exp(-1.6 * r1 / r_disk)) - 1, 2)
 
-        rdisk_array = np.logspace(log_rdisk_pc_range[0], log_rdisk_pc_range[1], 1000)
+        if log_rdisk_pc_range is None:
+            log_rdisk_pc_range = [2, 6]
+        rdisk_array = np.logspace(log_rdisk_pc_range[0], log_rdisk_pc_range[1], 4000)
         turn_points = turning_points(function_to_minimise(rdisk_array, r1))
         rdisk_soln_pc = rdisk_array[turn_points[0][0]]
         kpc_per_arcsec_src = cosmo.kpc_proper_per_arcmin(z_src).value / 60.

@@ -1,3 +1,19 @@
+serious problems for very high HI mass m>11.3 . Fix does not seem to be working. magnification explodes. check fix
+
+fixed with zoom but now I need an adjustable zoom based on the extent of the HI image
+magnification seems correlated with inclination which suggests a sampling bug - fixed
+
+rdisk solver crashes for very high mhi masses > 12
+
+Next fix is that it is good to scipy.ndimage.zoom into the image a bit to smooth over the noise. Probably a better approach would be to just
+zoom the full deflection map by 2. hmmm trying both and the image zoom seems to be doing better for some reason
+
+
+I've got it! I have to rescale the flux by (pixscale_defmap/pixscale_hi)^2
+
+Ok seems like the positions are fine now but the magnifications are often less than 1 which indicates that the pixel resolution of the image
+is indeed too large..I suppose an easy way to check this is to set the deflection map to zero so there's no deflection then just look at the
+magnifications in that case and it should just be 1. Good way to quantify errors.
 
 HIDISC translation written in hdr. when calculating image onedgrid takes this into account to the calculated source grid
 However it seems like some or all the images are zero...check this though

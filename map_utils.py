@@ -2,6 +2,7 @@ import numpy as np
 import pyfits as pf
 from scipy.interpolate import RectBivariateSpline
 from astropy.cosmology import Planck15 as cosmo
+from scipy.ndimage import zoom
 
 
 def setup_coordinate_grid(fits, inverse_ra_convention=False):
@@ -27,8 +28,8 @@ def oned_coordinate_grid(fits, translate=False):
         x = np.linspace(-1 * radius, radius, npix)
         y = np.linspace(-1 * radius, radius, npix)
         if translate:
-            x += fits_hdr['CRVAL1'] / 3600.
-            y += fits_hdr['CRVAL2'] / 3600,
+            x += fits_hdr['CRVAL1'] * 3600.
+            y += fits_hdr['CRVAL2'] * 3600,
         return x, y
 
 
@@ -45,6 +46,7 @@ class PositionGrid(object):
         self.npix = self.x_arcsec.shape[0]
         self.header = pf.getheader(fits)
         self.pix_scale_arcsec = self.header['CDELT2']*3600.
+        self.extent = self.npix * self.pix_scale_arcsec
         self.center = np.zeros(2)
         self.center[0] = self.header['CRVAL1']*3600.
         self.center[1] = self.header['CRVAL2']*3600.
@@ -100,6 +102,9 @@ class DeflectionMap(PositionGrid):
 
     def recenter_im_coord(self, coord_deg, coord_err_deg):
         coord_image_arcsec = np.random.normal(loc=coord_deg, scale=coord_err_deg) * 3600. - self.center
+        test_in_map = (np.abs(coord_image_arcsec) > self.extent).sum()
+        if test_in_map:
+            print 'IMAGE OUTSIDE OF MAP'
         return coord_image_arcsec.reshape((2, 1))
 
     def regrid(self, nfits):
@@ -117,34 +122,31 @@ class DeflectionMap(PositionGrid):
         return interpxdeflect, interpydeflect
 
     def calc_image(self, source_fits, z, write_image=True, imagename='image.npy'):
-        """
-        :param source_fits: either an array then will use original header or new fits
-        :param z:
-        :param write_image:
-        :param imagename:
-        :return:
-        """
         lens_eff = lens_efficiency(z)
         xmap = self.x_arcsec + self.xdeflect*lens_eff
         ymap = self.y_arcsec - self.ydeflect*lens_eff
-        if type(source_fits) == np.ndarray:
-            x, y = oned_coordinate_grid(self.original_fits, translate=True)
-            source_map_interp = RectBivariateSpline(x, y, source_fits)
-        else:
-            x, y = oned_coordinate_grid(source_fits, translate=True)
-            source_map_interp = RectBivariateSpline(x, y, pf.getdata(source_fits))
-
+        x, y = oned_coordinate_grid(source_fits, translate=True)
+        source_map_interp = RectBivariateSpline(x, y, pf.getdata(source_fits))
         image = source_map_interp.ev(xmap.flatten()[::-1], ymap.flatten()).reshape(self.x_arcsec.shape, order='F')
         if write_image:
             np.save(imagename, image)
         return image
 
-    def calc_magnification(self, sourcedata, z, write_image=False, imagename='test'):
-        image = self.calc_image(sourcedata, z, write_image=write_image, imagename=imagename)
-        if type(sourcedata) == np.ndarray:
-            return image.sum()/sourcedata.sum()
-        else:
-            return image.sum()/pf.getdata(sourcedata).sum()
+    def calc_magnification(self, sourcefits, z, write_image=False, imagename='test',
+                           zoom_factor=False, zoom_margin_factor=2):
+        srcsum = pf.getdata(sourcefits).sum()
+        srchdr = pf.getheader(sourcefits)
+        srcpixelscale = srchdr['CDELT2']
+        srcextent_arcsec = srcpixelscale * srchdr['NAXIS1']
+        pix_per_source_extent = srcextent_arcsec/self.pix_scale_arcsec
+        zoom_margin = np.int(pix_per_source_extent * zoom_margin_factor)
+        image = self.calc_image(sourcefits, z, write_image=write_image, imagename=imagename)
+        if zoom_factor:
+            ind1, ind2 = np.concatenate(np.where(image == image.max()))
+            imzoomed = zoom(image[ind1-zoom_margin:ind1+zoom_margin,
+                            ind2-zoom_margin:ind2+zoom_margin], zoom_factor) / zoom_factor**2
+            image = imzoomed
+        return image.sum()/srcsum * (self.pix_scale_arcsec / srcpixelscale)**2
 
 
 
