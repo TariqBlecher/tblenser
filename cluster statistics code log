@@ -1,4 +1,11 @@
-serious problems for very high HI mass m>11.3 . Fix does not seem to be working. magnification explodes. check fix
+inclination problem is solved. everything looking good except that the magnifications are very low. Good magnification evolution with redshift.
+
+
+Need to pad edges for interpolation - done
+
+Magnification is still anti-correlating strongly with inclination. Trying with a 4x interpolated map. Taking substantially longer to run.
+
+serious problems for very high HI mass m>11.3 . Fix does not seem to be working. magnification explodes. check fix - works
 
 fixed with zoom but now I need an adjustable zoom based on the extent of the HI image
 magnification seems correlated with inclination which suggests a sampling bug - fixed

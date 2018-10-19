@@ -43,7 +43,7 @@ for src_ind in src_indices:
 
         mag = defmap.calc_magnification(hidisk.fitsname, z, write_image=True,
                                         imagename='image_%s_%s' % (src_ind, sample), zoom_factor=2,
-                                        zoom_margin_factor=4)
+                                        cutout_margin_factor=4)
 
         parameter_tracking[sample] = [mag, rcmol, mhi, source_coord_arcsec_rel[0], source_coord_arcsec_rel[1],
                                       theta_20, theta_10, hidisk.rdisk_arcsec, z, nz]

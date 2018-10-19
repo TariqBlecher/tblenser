@@ -93,6 +93,11 @@ class HiDisk(object):
         hdr['NAXIS1'], hdr['NAXIS2'] = np.ones(2) * self.n_pix
         hdr['CRPIX1'], hdr['CRPIX2'] = np.ones(2) * self.n_pix / 2.
         hdr['CRVAL1'], hdr['CRVAL2'] = ra_dec_arcsec_offset / 3600.
+        src = self.twod_disk
+        src[:1, :] = 0
+        src[:, :1] = 0
+        src[-1:, :] = 0
+        src[:, -1:] = 0
         pf.writeto(name, self.twod_disk, hdr, clobber=True)
         self.fitsname = name
 

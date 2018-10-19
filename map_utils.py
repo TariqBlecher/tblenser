@@ -133,20 +133,23 @@ class DeflectionMap(PositionGrid):
         return image
 
     def calc_magnification(self, sourcefits, z, write_image=False, imagename='test',
-                           zoom_factor=False, zoom_margin_factor=2):
+                           zoom_factor=False, cutout_margin_factor=2):
+        # #Source fits
         srcsum = pf.getdata(sourcefits).sum()
         srchdr = pf.getheader(sourcefits)
-        srcpixelscale = srchdr['CDELT2']
-        srcextent_arcsec = srcpixelscale * srchdr['NAXIS1']
+        srcpixelscale_arcsec = srchdr['CDELT2'] * 3600
+        srcextent_arcsec = srcpixelscale_arcsec * srchdr['NAXIS1']
         pix_per_source_extent = srcextent_arcsec/self.pix_scale_arcsec
-        zoom_margin = np.int(pix_per_source_extent * zoom_margin_factor)
+
+        # # Interpolation is necessary to smooth pixelated features
+        cutout_margin = np.int(pix_per_source_extent * cutout_margin_factor)
         image = self.calc_image(sourcefits, z, write_image=write_image, imagename=imagename)
         if zoom_factor:
             ind1, ind2 = np.concatenate(np.where(image == image.max()))
-            imzoomed = zoom(image[ind1-zoom_margin:ind1+zoom_margin,
-                            ind2-zoom_margin:ind2+zoom_margin], zoom_factor) / zoom_factor**2
+            imzoomed = zoom(image[ind1-cutout_margin:ind1+cutout_margin,
+                            ind2-cutout_margin:ind2+cutout_margin], zoom_factor) / zoom_factor**2
             image = imzoomed
-        return image.sum()/srcsum * (self.pix_scale_arcsec / srcpixelscale)**2
+        return image.sum()/srcsum * (self.pix_scale_arcsec / srcpixelscale_arcsec)**2
 
 
 
