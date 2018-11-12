@@ -88,17 +88,18 @@ class HiDisk(object):
         np.save('rolled_disk', rolled_disk)
         self.disk = rolled_disk
 
-    def writeto_fits(self, name, hdr, ra_dec_arcsec_offset):
+    def writeto_fits(self, name, hdr, ra_dec_arcsec_offset, src=None):
         hdr['CDELT1'], hdr['CDELT2'] = np.array([-1, 1]) * self.pixel_scale_arcsec / 3600.
         hdr['NAXIS1'], hdr['NAXIS2'] = np.ones(2) * self.n_pix
         hdr['CRPIX1'], hdr['CRPIX2'] = np.ones(2) * self.n_pix / 2.
         hdr['CRVAL1'], hdr['CRVAL2'] = ra_dec_arcsec_offset / 3600.
-        src = self.twod_disk
+        if type(src) is None:
+            src = self.twod_disk
         src[:1, :] = 0
         src[:, :1] = 0
         src[-1:, :] = 0
         src[:, -1:] = 0
-        pf.writeto(name, self.twod_disk, hdr, clobber=True)
+        pf.writeto(name, src, hdr, clobber=True)
         self.fitsname = name
 
 

@@ -1,5 +1,19 @@
-inclination problem is solved. everything looking good except that the magnifications are very low. Good magnification evolution with redshift.
+Glafic test:
 
+glafic doing via a hack of lens_parametric srcs. hmmm I think I'll have to backtrack to lens_parametric sources because
+I need to use the same cosmological model and change prefixes (unless I can think of a hack to get around prefixes?)
+so ya at the moment just working on the pycharm side.
+
+defmap side of the test is done. Output parmtrack files which can then be input into glafic
+
+cutout margin bug fixing. Cutout margins can cause serious trouble if margin extends beyond image boundary
+
+---------------------------------------
+Minor bug for tiny, highly inclined sources where the small grids introduce interpolation errors. decreasing min grid size to 3.
+
+fixed some bugs in redshift sampling
+
+inclination problem is solved. everything looking good except that the magnifications are very low. Good magnification evolution with redshift.
 
 Need to pad edges for interpolation - done
 

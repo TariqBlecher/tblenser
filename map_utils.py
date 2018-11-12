@@ -133,7 +133,7 @@ class DeflectionMap(PositionGrid):
         return image
 
     def calc_magnification(self, sourcefits, z, write_image=False, imagename='test',
-                           zoom_factor=False, cutout_margin_factor=2):
+                           zoom_factor=1, cutout_margin_factor=2):
         # #Source fits
         srcsum = pf.getdata(sourcefits).sum()
         srchdr = pf.getheader(sourcefits)
@@ -142,13 +142,17 @@ class DeflectionMap(PositionGrid):
         pix_per_source_extent = srcextent_arcsec/self.pix_scale_arcsec
 
         # # Interpolation is necessary to smooth pixelated features
-        cutout_margin = np.int(pix_per_source_extent * cutout_margin_factor)
         image = self.calc_image(sourcefits, z, write_image=write_image, imagename=imagename)
-        if zoom_factor:
-            ind1, ind2 = np.concatenate(np.where(image == image.max()))
-            imzoomed = zoom(image[ind1-cutout_margin:ind1+cutout_margin,
-                            ind2-cutout_margin:ind2+cutout_margin], zoom_factor) / zoom_factor**2
-            image = imzoomed
+        cutout_margin = np.int(pix_per_source_extent * cutout_margin_factor)
+
+        ind1, ind2 = np.concatenate(np.where(image == image.max()))
+        if (ind1-cutout_margin) <= 0 or (ind2-cutout_margin) <= 0 or \
+           (ind1+cutout_margin) >= image.shape[0] or (ind2+cutout_margin) >= image.shape[0]:
+            cutout_margin_factor = 1
+            cutout_margin = np.int(pix_per_source_extent * cutout_margin_factor)
+        imzoomed = zoom(image[ind1-cutout_margin:ind1+cutout_margin,
+                        ind2-cutout_margin:ind2+cutout_margin], zoom_factor) / zoom_factor**2
+        image = imzoomed
         return image.sum()/srcsum * (self.pix_scale_arcsec / srcpixelscale_arcsec)**2
 
 

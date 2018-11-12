@@ -1,3 +1,5 @@
+
+# Only planning to use glafic for tests
 The major problem here is that the HIDiscs represented as tiny gaussians would require a
 1. A huge number of sources to be ray traced as in the case of the galaxy lens
 2. A huge number of pixels to be evaluated.

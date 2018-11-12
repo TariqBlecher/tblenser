@@ -7,13 +7,13 @@ import time
 start = time.time()
 
 parm_file = 'sim_catalog_29.npy'
-xdeflectfits = 'hlsp_frontier_model_abell2744_cats_v4.1_x-arcsec-deflect-zoom.fits'
-ydeflectfits = 'hlsp_frontier_model_abell2744_cats_v4.1_y-arcsec-deflect-zoom.fits'
+xdeflectfits = 'hlsp_frontier_model_abell2744_glafic_v4_x-arcsec-deflect-recentered.fits'
+ydeflectfits = 'hlsp_frontier_model_abell2744_glafic_v4_y-arcsec-deflect-recentered.fits'
 ra_image_mean, dec_image_mean, z_src, u_zsrc, mhi_log, u_mhi_log, ra_err_deg, dec_err_deg = np.load(parm_file)
 src_indices = np.arange(mhi_log.shape[0])
 coords_deg = np.vstack((ra_image_mean, dec_image_mean))
 coords_err_deg = np.vstack((ra_err_deg, dec_err_deg))
-n_samples_per_src = 50
+n_samples_per_src = 1
 rcmol_log_mean_sig = [-0.1, 0.3]
 mass_sampling_pdf = 'uniform'
 zcluster = 0.308
@@ -32,14 +32,18 @@ for src_ind in src_indices:
         theta_20 = sample_inclination_deg()
         z, nz = sample_check_z(z=z_src[src_ind], u_z=u_zsrc[src_ind])
         recentered_image_coordinate = defmap.recenter_im_coord(coords_deg[:, src_ind], coords_err_deg[:, src_ind])
-        print recentered_image_coordinate
         source_coord_arcsec_rel = defmap.calc_source_positions(recentered_image_coordinate, z)[:, 0]
-        print source_coord_arcsec_rel
         # # HI Disc
         hidisk = HiDisk(rcmol=rcmol, smoothing_height_pix=False, theta_2_0=theta_20, theta_1_0=theta_10,
                         log10_mhi=mhi, z_src=z, scale_by_rdisk=12, grid_size_min_arcsec=3, minpixelsizecheck=False)
 
-        hidisk.writeto_fits('hidisk_twodisk_%s_%s.fits' % (src_ind, sample), defmap.header, source_coord_arcsec_rel)
+        y, x = np.mgrid[-hidisk.grid_length_arcsec / 2:hidisk.grid_length_arcsec / 2:1j * hidisk.n_pix,
+                        -hidisk.grid_length_arcsec / 2:hidisk.grid_length_arcsec / 2:1j * hidisk.n_pix]
+        r = np.sqrt(x*x+y*y)
+        gauss_src = np.exp(-(r**2 / (2.0 * (hidisk.rdisk_arcsec/2)**2)))
+
+        hidisk.writeto_fits('hidisk_twodisk_%s_%s.fits' % (src_ind, sample), defmap.header, source_coord_arcsec_rel,
+                            src=gauss_src)
 
         mag = defmap.calc_magnification(hidisk.fitsname, z, write_image=True,
                                         imagename='image_%s_%s' % (src_ind, sample), zoom_factor=2,

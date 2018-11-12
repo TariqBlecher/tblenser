@@ -10,13 +10,13 @@ def mass_sampling(pdf='uniform', uniform_lower_bound=8.5, uniform_width=2.5, mas
     return mhi
 
 
-def sample_check_z(z, u_z, z_cluster=0.308):
-        z = 0
-        nz = 0
-        while z < z_cluster:
-            z = np.random.normal(z, u_z)
-            nz += 1
-        return z, nz
+def sample_check_z(z, u_z, z_cluster=0.308, band_edge=0.58):
+    z = np.random.normal(z, u_z)
+    nz = 0
+    while np.logical_or(z < z_cluster, z > band_edge):
+        z = np.random.normal(z, u_z)
+        nz += 1
+    return z, nz
 
 
 def sample_inclination_deg():
