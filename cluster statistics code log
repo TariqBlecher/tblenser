@@ -1,14 +1,25 @@
-Glafic test:
+#Predictions for the observation
+Ready for test run
+Rcmol is still on SLACS setting
 
-glafic doing via a hack of lens_parametric srcs. hmmm I think I'll have to backtrack to lens_parametric sources because
-I need to use the same cosmological model and change prefixes (unless I can think of a hack to get around prefixes?)
-so ya at the moment just working on the pycharm side.
+----------------------------------------
+#Glafic comparison test:
+
+
+not working. takes too long to run to sort out bugs. going to just do fake sources near the center instead
+ so I can cut down on comp time
+
+on radiopadre now, need to test lens_parametric_srcs for ra/dec . o
+
+glafic: did a hack of lens_parametric srcs
 
 defmap side of the test is done. Output parmtrack files which can then be input into glafic
 
 cutout margin bug fixing. Cutout margins can cause serious trouble if margin extends beyond image boundary
 
 ---------------------------------------
+#Basic internal testing
+
 Minor bug for tiny, highly inclined sources where the small grids introduce interpolation errors. decreasing min grid size to 3.
 
 fixed some bugs in redshift sampling

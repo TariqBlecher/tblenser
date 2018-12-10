@@ -6,6 +6,7 @@ import time
 # log = file('log.txt', 'w'); sys.stdout = log
 start = time.time()
 
+# Parameter setup
 parm_file = 'sim_catalog_29.npy'
 xdeflectfits = 'hlsp_frontier_model_abell2744_cats_v4.1_x-arcsec-deflect-zoom.fits'
 ydeflectfits = 'hlsp_frontier_model_abell2744_cats_v4.1_y-arcsec-deflect-zoom.fits'
@@ -13,9 +14,9 @@ ra_image_mean, dec_image_mean, z_src, u_zsrc, mhi_log, u_mhi_log, ra_err_deg, de
 src_indices = np.arange(mhi_log.shape[0])
 coords_deg = np.vstack((ra_image_mean, dec_image_mean))
 coords_err_deg = np.vstack((ra_err_deg, dec_err_deg))
-n_samples_per_src = 50
+n_samples_per_src = 100
 rcmol_log_mean_sig = [-0.1, 0.3]
-mass_sampling_pdf = 'uniform'
+mass_sampling_pdf = 'normal'
 zcluster = 0.308
 
 defmap = DeflectionMap(xdeflect_fits=xdeflectfits, ydeflect_fits=ydeflectfits, center=False)
@@ -27,14 +28,15 @@ for src_ind in src_indices:
         # # Sampling
         mhi = mass_sampling(pdf=mass_sampling_pdf, uniform_lower_bound=8., uniform_width=2.5,
                             mass_mean_log10=mhi_log[src_ind], mass_sig_log10=u_mhi_log[src_ind])
+
         rcmol = np.random.lognormal(rcmol_log_mean_sig[0], rcmol_log_mean_sig[1])
         theta_10 = np.random.rand()*180.
         theta_20 = sample_inclination_deg()
         z, nz = sample_check_z(z=z_src[src_ind], u_z=u_zsrc[src_ind])
         recentered_image_coordinate = defmap.recenter_im_coord(coords_deg[:, src_ind], coords_err_deg[:, src_ind])
-        print recentered_image_coordinate
         source_coord_arcsec_rel = defmap.calc_source_positions(recentered_image_coordinate, z)[:, 0]
-        print source_coord_arcsec_rel
+        print recentered_image_coordinate, source_coord_arcsec_rel
+
         # # HI Disc
         hidisk = HiDisk(rcmol=rcmol, smoothing_height_pix=False, theta_2_0=theta_20, theta_1_0=theta_10,
                         log10_mhi=mhi, z_src=z, scale_by_rdisk=12, grid_size_min_arcsec=3, minpixelsizecheck=False)
