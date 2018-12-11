@@ -6,16 +6,18 @@ import sys
 
 
 class LensPoints(object):
-    """Original class for SIE lens"""
+    """LENS FOR RX J11"""
     def __init__(self, input_file_name='slacs.input', prefix='test', length_arcsec=6., pix_res=0.1,
-                 lens_v_sigma_kms=220, lens_ellipticity=0., lens_position_angle_deg_eastofnorth=0., lens_z=0.1,
-                 source_data=None, src_threshold=0.1, z_src=0.407):
+                 einstein_radius=1.7, lens_ellipticity=0.767, lens_position_angle_deg_eastofnorth=111, lens_z=0.295,
+                 source_data=None, src_threshold=0.1, z_src=0.654, radial_slope=2):
         self.input_file = input_file_name
         self.prefix = prefix
+        self.zsrc = z_src
         general_parameters = self.primary_parameter_dict(lens_z, length_arcsec, pix_res)
-        sie_lens_string = self.sie_string(lens_v_sigma_kms, lens_ellipticity, lens_position_angle_deg_eastofnorth)
+        main_lens_string = self.elliptical_lens_string(lens_ellipticity, lens_position_angle_deg_eastofnorth,
+                                                       einstein_radius, radial_slope)
         self.write_srcfile(source_data, src_threshold, length_arcsec, pix_res)
-        self.write_input_file(general_parameters, sie_lens_string, z_src)
+        self.write_input_file(general_parameters, main_lens_string, z_src)
         self.run_glafic()
 
     def primary_parameter_dict(self, zl, length_arcsec, pix_res):
@@ -28,12 +30,11 @@ class LensPoints(object):
                 'flag_srcsbin': 0, 'srcsbinsize': 0.2
                 }
 
-    def sie_string(self, v_sigma_kms, ellipticity, position_angle_deg_eastofnorth):
+    def elliptical_lens_string(self, ellipticity, position_angle_deg_eastofnorth, einstein_radius, radial_slope):
         """lens   sie sigma_kms[1] x[2] y[3] e[4]=0 spherical  theta_e_deg_eastofnorth[5] rcore[6] n/a[7]
         Assume lens is at centre for now."""
-        return "lens sie %f 0 0 %f %f 0 0" % (v_sigma_kms,
-                                              ellipticity,
-                                              position_angle_deg_eastofnorth)
+        return "lens pow %f 0 0 %f %f %f %f" % (self.zsrc, ellipticity, position_angle_deg_eastofnorth,
+                                                  einstein_radius, radial_slope)
 
     def write_srcfile(self, src_image, threshold, length_arcsec, pix_res):
         num_pix = src_image.shape[0]
