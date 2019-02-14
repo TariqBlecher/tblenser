@@ -95,6 +95,8 @@ class HiDisk(object):
         hdr['CRVAL1'], hdr['CRVAL2'] = ra_dec_arcsec_offset / 3600.
         if type(src) is None:
             src = self.twod_disk
+        elif src == 'gauss':
+            src = self.gauss_src()
         src[:1, :] = 0
         src[:, :1] = 0
         src[-1:, :] = 0
@@ -102,9 +104,12 @@ class HiDisk(object):
         pf.writeto(name, src, hdr, clobber=True)
         self.fitsname = name
 
-
-
-
+    def gauss_src(self):
+        y, x = np.mgrid[-self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix,
+                        -self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix]
+        r = np.sqrt(x*x+y*y)
+        gauss_src = np.exp(-(r**2 / (2.0 * (self.rdisk_arcsec/2)**2)))
+        return gauss_src
 
 
 

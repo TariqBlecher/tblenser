@@ -13,10 +13,10 @@ class LensInstance(object):
         self.source_dictionary = deepcopy(source_dictionary)
         self.input_file = self.index+'.input'
         self.prefix = 'abell2744'+self.index
-        self.setup_lines = ('omega     0.3\n',
-               'lambda\t  0.7\n',
+        self.setup_lines = ('omega     0.3075\n',
+               'lambda\t  0.691\n',
                'weos\t  -1.0\n',
-               'hubble\t  0.7\n',
+               'hubble\t  67.74\n',
                'zl\t  0.308\n',
                'prefix\t  %s\n'%self.prefix,
                'xmin\t  -80.0\n',

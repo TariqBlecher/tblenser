@@ -1,0 +1,53 @@
+4/02/2019
+
+Key files:
+
+cluster_statistics.py [highest level driver script]
+map_utils.py [cluster lensing specific code]
+HiDisk [HIdisk code]
+
+--------------------------------------------------------
+Overview from cluster_statistics.py
+
+import + parameter sampling
+Initialise Deflection Map Class
+Loop over Nsources
+    Loop over Nsamples
+        more parameter sampling
+        Initialise HIDisc class on grid comparable to its size
+        Calculate Magnification
+        save data
+-----------------------------------------------------------
+Tricks
+1. Interpolation & using a small HIDisk grid
+A key step in the code is:
+
+source_map_interp = RectBivariateSpline(x, y, pf.getdata(source_fits))  # Creates an object for interpolating
+#xmap,ymap is the mapping from image to source coordinates
+xmap = self.x_arcsec + self.xdeflect*lens_eff
+ymap = self.y_arcsec - self.ydeflect*lens_eff
+image = source_map_interp.ev(xmap.flatten()[::-1], ymap.flatten()).reshape(self.x_arcsec.shape, order='F')
+
+Nice features of this step is that the HiDisc grid can be much smaller than the lens grid. When the interpolation
+refers to pixels outside of the source map, numpy interpolates to zero.
+
+2. The publicly available deflection maps are not at a very high resolution so I have interpolate using scipy zoom to
+create new maps.
+
+3. Related to point 2, I also interpolate the lensed image..I think I needed this for highly inclined sources
+
+4. redshift sampling, some of the sources are on the edge of the range, so z needs to be sampled many times before a
+workable value is found. However this will bias detection possibilities, so nz keeps track of the number of trial attempts
+---------------------------------------------------------
+
+Tests
+
+1. Recover magnification equal to 1 for a deflection map with all entries set to zero. [passed]
+2.
+
+
+
+
+
+
+

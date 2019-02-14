@@ -39,6 +39,7 @@ for sample in range(n_samples_per_src):
                     theta_2_0=theta_20, theta_1_0=theta_10,
                     x_off_arcsec=x_off, y_off_arcsec=y_off, log10_mhi=mhi, z_src=z_src,
                     grid_size_min_arcsec=grid_size_min)
+    np.save('hidisk_twodisk_RXJ_%s' % sample, hidisk.twod_disk)
 
     prefix = '_%s' % sample
     nonparametric_sim = LensPoints(input_file_name=prefix + '.input', prefix=prefix,
@@ -56,7 +57,6 @@ for sample in range(n_samples_per_src):
     mag = nonparametric_sim.calc_mag()
     parameter_tracking[sample] = [mag, rcmol, mhi, x_off, y_off, theta_20, theta_10, hidisk.rdisk_arcsec]
     flux_error_tracking[sample] = [orig_total_flux, sampled_unlensed_flux, summed_error]
-    np.save('hidisk_twodisk_RXJ_%s' % sample, hidisk.twod_disk)
 
 np.save('RXJ_parmtrack', parameter_tracking)
 np.save('RXJ_errortrack', flux_error_tracking)

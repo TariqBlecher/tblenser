@@ -8,18 +8,19 @@ start = time.time()
 
 # Parameter setup
 parm_file = 'sim_catalog_29.npy'
-xdeflectfits = 'hlsp_frontier_model_abell2744_cats_v4.1_x-arcsec-deflect-zoom.fits'
-ydeflectfits = 'hlsp_frontier_model_abell2744_cats_v4.1_y-arcsec-deflect-zoom.fits'
+xdeflectfits = 'hlsp_frontier_model_abell2744_glafic_v4_x-arcsec-deflect-recentered.fits'#'hlsp_frontier_model_abell2744_cats_v4.1_x-arcsec-deflect-zoom.fits'
+ydeflectfits = 'hlsp_frontier_model_abell2744_glafic_v4_y-arcsec-deflect-recentered.fits'#'hlsp_frontier_model_abell2744_cats_v4.1_y-arcsec-deflect-zoom.fits'
 ra_image_mean, dec_image_mean, z_src, u_zsrc, mhi_log, u_mhi_log, ra_err_deg, dec_err_deg = np.load(parm_file)
 src_indices = np.arange(mhi_log.shape[0])
 coords_deg = np.vstack((ra_image_mean, dec_image_mean))
 coords_err_deg = np.vstack((ra_err_deg, dec_err_deg))
-n_samples_per_src = 100
+n_samples_per_src = 1 # 100
 rcmol_log_mean_sig = [-0.1, 0.3]
-mass_sampling_pdf = 'normal'
+mass_sampling_pdf = 'uniform' #'normal'
 zcluster = 0.308
+srctype = 'gauss' ##gauss for gauss testing
 
-defmap = DeflectionMap(xdeflect_fits=xdeflectfits, ydeflect_fits=ydeflectfits, center=False)
+defmap = DeflectionMap(xdeflect_fits=xdeflectfits, ydeflect_fits=ydeflectfits, center=False, z_lens=zcluster)
 
 for src_ind in src_indices:
     parameter_tracking = np.zeros((n_samples_per_src, 10))
@@ -41,9 +42,10 @@ for src_ind in src_indices:
         hidisk = HiDisk(rcmol=rcmol, smoothing_height_pix=False, theta_2_0=theta_20, theta_1_0=theta_10,
                         log10_mhi=mhi, z_src=z, scale_by_rdisk=12, grid_size_min_arcsec=3, minpixelsizecheck=False)
 
-        hidisk.writeto_fits('hidisk_twodisk_%s_%s.fits' % (src_ind, sample), defmap.header, source_coord_arcsec_rel)
+        hidisk.writeto_fits('hidisk_twodisk_%s_%s.fits' % (src_ind, sample), defmap.header,
+                            source_coord_arcsec_rel, src=srctype)
 
-        mag = defmap.calc_magnification(hidisk.fitsname, z, write_image=True,
+        mag = defmap.calc_magnification(hidisk.fitsname, write_image=True, z_src=z,
                                         imagename='image_%s_%s' % (src_ind, sample), zoom_factor=2,
                                         cutout_margin_factor=2)
 
