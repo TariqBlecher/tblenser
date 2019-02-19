@@ -4,11 +4,6 @@ from scipy.interpolate import RectBivariateSpline
 from astropy.cosmology import Planck15 as cosmo
 from scipy.ndimage import zoom
 import itertools
-from shapely.geometry import box, Polygon
-from rtree import index
-import pandas as pd
-import pickle
-
 
 
 def setup_coordinate_grid(fits, inverse_ra_convention=False, extra_row_column=False):
@@ -57,6 +52,35 @@ def lens_efficiency(z_lens, z_src):
     dist_observer_source = cosmo.angular_diameter_distance(z_src).value
     return dist_lens_source/dist_observer_source
 
+def line_equation(a, b):
+    if b[0] == a[0]: # to protect against infinities
+        b[0] = a[0]+1e-5
+    slope = (b[1] - a[1])/(b[0] - a[0])
+    yintercept = b[1] - slope*b[0]
+    return slope, yintercept
+
+def area_polygon(x, y):
+    area = 0
+    npoints = x.shape[0]
+    j = npoints - 1
+    for i in range(npoints):
+        area = area + (x[j] + x[i]) * (y[j] - y[i])
+        j = i
+        i += 1
+    return area/2.
+
+
+def Sign(p1, p2, p3):
+    return (p1[0] - p3[0]) * (p2[1] - p3[1]) - (p2[0] - p3[0]) * (p1[1] - p3[1])
+
+
+def IsPointInTri(pt, v1, v2, v3):
+    b1 = Sign(pt, v1, v2) < 0.0
+    b2 = Sign(pt, v2, v3) < 0.0
+    b3 = Sign(pt, v3, v1) < 0.0
+
+    return ((b1 == b2) & (b2 == b3));
+
 
 class PositionGrid(object):
     """
@@ -90,17 +114,62 @@ class PositionGrid(object):
 
 
 class SrcGrid(PositionGrid):
-    def __init__(self, source_fits, center=True):
-        PositionGrid.__init__(self, source_fits, center=center)
-        self.flat_x = self.x_arcsec.flatten()
-        self.flat_y = self.y_arcsec.flatten()
-        self.gridcells = np.zeros(self.flat_x.shape[0], dtype=object)
-        self.idx = index.Index()
-        for i in range(self.flat_x.shape[0]):
-            cellbounds = (self.flat_x[i]-self.pix_scale_arcsec/2., self.flat_y[i]-self.pix_scale_arcsec/2.,
-                          self.flat_x[i]+self.pix_scale_arcsec/2., self.flat_y[i]+self.pix_scale_arcsec/2.)
-            self.gridcells[i] = box(*cellbounds)
-            self.idx.insert(i, cellbounds)
+    def __init__(self, fits, center=True):
+        PositionGrid.__init__(self, fits, center)
+        self.minsrcgrid = np.array([self.x_arcsec.min()-self.pix_scale_arcsec/2.,
+                                    self.y_arcsec.min()-self.pix_scale_arcsec/2.])
+
+
+        def find_intersections_of_grid_and_line(self, vertices_arcsec):
+                extra_vertices = []
+                vertices_arcsec -= self.minsrcgrid   # #shift vertices with respect to bottom of src grid
+
+                n_grid_lines_above_bottom = np.floor(vertices_arcsec/self.pix_scale_arcsec)
+                n_gridlines_between_points = np.abs(n_grid_lines_above_bottom[1, :] - n_grid_lines_above_bottom[0, :])
+                slope, y_intercept = line_equation(vertices_arcsec[1], vertices_arcsec[0])
+
+                if n_gridlines_between_points[0] > 0:
+                    for i in range(1, n_gridlines_between_points[0]+1):
+                        x = (n_grid_lines_above_bottom[np.argmin(n_grid_lines_above_bottom[:, 0]), 0]
+                             + i) * self.pix_scale_arcsec
+                        y = slope*x + y_intercept
+                        extra_vertices.append([x, y])
+
+                if n_gridlines_between_points[1] > 0:
+                    for i in range(1, n_gridlines_between_points[1]+1):
+                        y = (n_grid_lines_above_bottom[np.argmin(n_grid_lines_above_bottom[:, 1]), 1]
+                             + i) * self.pix_scale_arcsec
+                        x = (y-y_intercept)/slope
+                        extra_vertices.append([x, y])
+                return extra_vertices
+
+
+        def find_vertices_triangle(self, main_vertices_arcsec):
+            # #Find points where lines between main vertices hit the grid lines
+            line_inds = list(itertools.combinations(range(3), 2))  # #[(0, 1), (0, 2), (1, 2)] each line
+            all_vertices = main_vertices_arcsec.tolist()
+            for line_ind in line_inds:
+                # # restack vertices shape is (point, coordinate)
+                vertices_arcsec = np.vstack((main_vertices_arcsec[line_ind[0]], main_vertices_arcsec[line_ind[1]]))
+                all_vertices.append(self.find_intersections_of_grid_and_line(vertices_arcsec))
+
+            # #Find relevant corners
+
+            allowable_source_region = np.vstack((np.floor((np.min(main_vertices_arcsec, axis=0)-self.minsrcgrid) /
+                                                          self.pix_scale_arcsec),
+                                                 np.ceil((np.max(main_vertices_arcsec, axis=0)-self.minsrcgrid) /
+                                                         self.pix_scale_arcsec)))   # # shape min/max, coord
+            # # Looping over the source grid
+            for src_ind_x in range(allowable_source_region[0, 0], allowable_source_region[1, 0]):
+                for src_ind_y in range(allowable_source_region[0, 1], allowable_source_region[1, 1]):
+
+                    dist = np.sqrt((all_vertices[1, :]-self.y_arcsec[src_ind_x, src_ind_y])**2 +
+                                   (all_vertices[0, :]-self.x_arcsec[src_ind_x, src_ind_y])**2)
+                    IsPointInTri() # check corners
+
+
+
+
 
 
 class DeflectionMap(PositionGrid):
@@ -209,20 +278,44 @@ class DeflectionMap(PositionGrid):
         xymap[1] = self.y_arcsec - self.ydeflect*lens_eff
         return xymap
 
+    def calc_lines(self, xy_ray_traced):
+        #  # Lines shape (horizontal/vertical/diagonal, m/c, x , y)
+        lines = np.zeros((3, 2, self.npix, self.npix))
+        # #slopes
+        lines[0, 0, :-1, :] = (xy_ray_traced[1, 1:, :] - xy_ray_traced[1, :-1, :])/(xy_ray_traced[0, 1:, :] - xy_ray_traced[0, :-1, :])
+        lines[1, 0, :, :-1] = (xy_ray_traced[1, :, 1:] - xy_ray_traced[1, :, :-1])/(xy_ray_traced[0, :, 1:] - xy_ray_traced[0, :, :-1])
+        lines[2, 0, :-1, :-1] = (xy_ray_traced[1, :-1, 1:] - xy_ray_traced[1, 1:, :-1])/(xy_ray_traced[0, :-1, 1:] - xy_ray_traced[0, 1:, :-1])
+        # # intercepts
+        lines[0, 1, :-1, :] = xy_ray_traced[1, 1:, :] - xy_ray_traced[0, 1:, :] * lines[0, 0, :, :]
+        lines[1, 1, :, :-1] = xy_ray_traced[1, :, 1:] - xy_ray_traced[0, :, 1:] * lines[1, 0, :, :]
+        lines[2, 1, :-1, :-1] = xy_ray_traced[2, :-1, 1:] - xy_ray_traced[0, :-1, 1:]*lines[2, 0, :, :]
+        return lines
+
+    def calc_n_gridlines_between_points(self, xy_ray_traced):
+        n_grid_lines_above_bottom = np.floor(xy_ray_traced/self.pix_scale_arcsec)
+        #3 lines x 2 directions x N x N
+        n_gridlines_between_points = np.zeros((3, 2, self.npix, self.npix))
+        n_gridlines_between_points[0, 0, :, :-1] = np.abs(n_grid_lines_above_bottom[1, 1:, :] - n_grid_lines_above_bottom[0, :])
+
+
+
+
+
     def weight_matrix(self, source_fits, z_src):
         xy_ray_traced = self.map_image_coord_to_src(z_src=z_src)
         srcgrid = SrcGrid(source_fits)
+        weights = np.zeros((srcgrid.npix, srcgrid.npix, self.npix-1, self.npix-1))
+        lines = self.calc_lines(xy_ray_traced)  #   ##Lines shape (horizontal/vertical/diagonal, m/c, x , y)
 
-        areas = []
-        src_inds = []
+        xy_ray_traced -= srcgrid.minsrcgrid.reshape(2,1,1)
+
         # # Loop over image pixels
         for x_ind in range((self.npix-1)):
             for y_ind in range((self.npix-1)):
                 for triangle in range(2):
                     if triangle == 0:
                         # #lower triangle, shape (point, coordinate) i.e. (3,2)
-                        main_vertices_arcsec = np.array([xy_ray_traced[:, x_ind, y_ind],
-                                                         xy_ray_traced[:, x_ind, y_ind+1],
+                        main_vertices_arcsec = np.array([xy_ray_traced[:, x_ind, y_ind], xy_ray_traced[:, x_ind, y_ind+1],
                                                          xy_ray_traced[:, x_ind+1, y_ind]])
                     else:
                         # #upper triangle
@@ -230,44 +323,57 @@ class DeflectionMap(PositionGrid):
                                                          xy_ray_traced[:, x_ind, y_ind+1],
                                                          xy_ray_traced[:, x_ind+1, y_ind]])
 
-                    polygon_shape = Polygon(main_vertices_arcsec)
-                    indices_of_srcpix_intersection = np.array([src_pix_ind for src_pix_ind
-                                                               in srcgrid.idx.intersection(polygon_shape.bounds)])
-                    src_inds.append(indices_of_srcpix_intersection)
-                    area_temp = []
-                    for src_pix_ind in indices_of_srcpix_intersection:
-                        area_temp.append(polygon_shape.intersection(srcgrid.gridcells[src_pix_ind]).area)
-                    area_temp = np.array(area_temp)
-                    if area_temp.sum() == 0.:
-                        areas.append(np.zeros(len(indices_of_srcpix_intersection)))
-                    else:
-                        areas.append(area_temp/(2*area_temp.sum()))
-        with open('areas.p', 'wb') as fp:
-            pickle.dump(areas, fp)
-        with open('srcind.p', 'wb') as fp:
-            pickle.dump(src_inds, fp)
-        return areas, src_inds
+                line_inds = list(itertools.combinations(range(3), 2))  # #[(0, 1), (0, 2), (1, 2)] each line
+                extra_vertices_x = []; extra_vertices_y = []
 
-    def calc_image2(self, source_fits, z_src, write_image=True, imagename='image.npy'):
-        areas, src_inds = self.weight_matrix(source_fits, z_src)
-        srcfits = pf.getdata(source_fits).flatten()
-        image = np.zeros((self.npix-1, self.npix-1))
-        i = 0
-        for x_ind, x in enumerate(np.arange(self.npix-1)):
-            for y_ind, y in enumerate(np.arange(self.npix-1)):
-                if len(list(src_inds[i])) == 0:
-                    lower_triangle = 0
-                else:
-                    lower_triangle = np.sum(srcfits[src_inds[i]]*areas[i])
-                if len(list(src_inds[i+1])) == 0:
-                    upper_triangle = 0
-                else:
-                    upper_triangle = np.sum(srcfits[src_inds[i+1]]*areas[i+1])
-                image[x_ind, y_ind] = lower_triangle+upper_triangle
-                i += 2
-        if write_image:
-            np.save(imagename, image)
-        return image
+                # #Works out the extra vertices (except for corners)
+                for line_ind in line_inds:
+                    # # restack vertices shape is (point, coordinate)
+                    vertices_arcsec = np.vstack((main_vertices_arcsec[line_ind[0]], main_vertices_arcsec[line_ind[1]]))
+                    # #shift vertices with respect to bottom of src grid
+                    vertices_arcsec -= SrcGrid.minsrcgrid
+                    n_grid_lines_above_bottom = np.floor(vertices_arcsec/srcgrid.pix_scale_arcsec)
+                    n_vertices_between_points = np.abs(n_grid_lines_above_bottom[1, :] - n_grid_lines_above_bottom[0, :])
+                    slope, y_intercept = line_equation(vertices_arcsec[1], vertices_arcsec[0])
+
+                    if n_vertices_between_points[0] > 0:
+                        for i in range(1, n_vertices_between_points[0]+1):
+                            x = (n_grid_lines_above_bottom[np.argmin(n_grid_lines_above_bottom[:, 0]), 0]
+                                 + i) * srcgrid.pix_scale_arcsec
+                            y = slope*x + y_intercept
+                            extra_vertices_x.append(x); extra_vertices_y.append(y)
+
+                    if n_vertices_between_points[1] > 0:
+                        for i in range(1, n_vertices_between_points[1]+1):
+                            y = (n_grid_lines_above_bottom[np.argmin(n_grid_lines_above_bottom[:, 1]), 1]
+                                 + i) * srcgrid.pix_scale_arcsec
+                            x = (y-y_intercept)/slope
+                            extra_vertices_x.append(x); extra_vertices_y.append(y)
+
+                nex = len(extra_vertices_x)
+                all_vertices = np.zeros((3+nex, 2))
+                all_vertices[:3, :] = main_vertices_arcsec
+                all_vertices[3:, :] = extra_vertices_x, extra_vertices_x
+
+                allowable_source_region = np.vstack((np.floor((np.min(main_vertices_arcsec, axis=0)-SrcGrid.minsrcgrid) /
+                                                              srcgrid.pix_scale_arcsec),
+                                                     np.ceil((np.max(main_vertices_arcsec, axis=0)-SrcGrid.minsrcgrid) /
+                                                             srcgrid.pix_scale_arcsec)))   # # shape min/max, coord
+                # # Looping over the source grid
+            for src_ind_x in range(allowable_source_region[0, 0], allowable_source_region[1, 0]):
+                for src_ind_y in range(allowable_source_region[0,1], allowable_source_region[1, 1]):
+
+                    dist = np.sqrt((all_vertices[1, :]-srcgrid.y_arcsec[src_ind_x, src_ind_y])**2 +
+                                   (all_vertices[0, :]-srcgrid.x_arcsec[src_ind_x, src_ind_y])**2)
+                    IsPointInTri() # check corners
+
+                    relevant_vertices = all_vertices[dist <= srcgrid.pix_scale_arcsec]
+                    weights[src_ind_x, src_ind_y, x_ind, y_ind] = area_polygon(relevant_vertices[0, :],
+                                                                               relevant_vertices[1, :])
+
+        return weights
+
+
 
 
 
