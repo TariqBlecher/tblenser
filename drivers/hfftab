@@ -1,0 +1,3 @@
+field xdeflectfits ydeflectfits zcluster
+abell370 hlsp_frontier_model_abell370_cats_v4_x-arcsec-deflect.fits hlsp_frontier_model_abell370_cats_v4_y-arcsec-deflect.fits 0.375
+abell2744 hlsp_frontier_model_abell2744_cats_v4.1_x-arcsec-deflect.fits hlsp_frontier_model_abell2744_cats_v4.1_y-arcsec-deflect.fits 0.308
