@@ -23,8 +23,8 @@ class MagCutTool(PositionGrid):
             return np.mean(np.abs(mag))
 
     def get_cutout_ind(self, coord, flux_radius_as):
-        xnew = self.x_arcsec-coord[0]
-        ynew = self.y_arcsec-coord[1]
+        xnew = self.x_deg - coord[0]
+        ynew = self.y_deg - coord[1]
         twodsum = np.sqrt(xnew**2 + ynew**2)
         cutout_ind = twodsum <= flux_radius_as
         return cutout_ind

@@ -3,7 +3,7 @@ from scipy.ndimage.filters import gaussian_filter1d
 from scipy.ndimage.interpolation import rotate
 from astropy.cosmology import Planck15 as cosmo
 from astropy.io import fits
-from utils import turning_points
+from tblens.utils import turning_points
 
 
 class HiDisk(object):
@@ -12,7 +12,7 @@ class HiDisk(object):
     """
     def __init__(self, n_pix=100, x_off_arcsec=0, y_off_arcsec=0, log10_mhi=9, z_src=0.4, rcmol=1.,
                  theta_2_0=0, theta_1_0=0, smoothing_height_pix=False, mass_normalisation=False,
-                 scale_by_rdisk=10, grid_size_min_arcsec=3., minpixelsizecheck=True):
+                 scale_by_rdisk=10, grid_size_min_arcsec=3.):
 
         # # Fundamental physical parameters
         self.Rcmol = rcmol
@@ -26,11 +26,7 @@ class HiDisk(object):
         if self.grid_length_arcsec < grid_size_min_arcsec:
             self.grid_length_arcsec = grid_size_min_arcsec
 
-        self.pixel_scale_arcsec = self.grid_length_arcsec / float(self.n_pix)
-        if minpixelsizecheck:         # Stop at small pixel size..for unknown reason glafic crashes below this pixel size
-            if self.pixel_scale_arcsec < 0.03:
-                self.pixel_scale_arcsec = 0.03
-                self.grid_length_arcsec = self.pixel_scale_arcsec * self.n_pix
+        self.pixel_scale_arcsec = self.grid_length_arcsec / self.n_pix
         if mass_normalisation:
             self.normalisation = self.mh / (2 * np.pi * self.rdisk_arcsec ** 2)
         else:
@@ -76,7 +72,7 @@ class HiDisk(object):
         r = np.sqrt(x*x+y*y)
         twod_density = self.normalisation*np.exp(- r / self.rdisk_arcsec) / (1 + self.Rcmol * np.exp(-1.6 * r / self.rdisk_arcsec))
         den3 = np.zeros((self.n_pix, self.n_pix, self.n_pix))
-        den3[:, :, self.n_pix / 2] = twod_density
+        den3[:, :, int(self.n_pix / 2)] = twod_density
         if self.smoothing_height:
             den3 = gaussian_filter1d(den3, self.smoothing_height, axis=2)
         np.save('face_on_density', den3)
@@ -92,11 +88,12 @@ class HiDisk(object):
         np.save('rolled_disk', rolled_disk)
         self.disk = rolled_disk
 
-    def writeto_fits(self, name, hdr, ra_dec_arcsec_offset, src_type=None, flux_norm=False):
+    def writeto_fits(self, name, hdr, ra_dec_deg, src_type=None, flux_norm=False):
         hdr['CDELT1'], hdr['CDELT2'] = np.array([-1, 1]) * self.pixel_scale_arcsec / 3600.
+        hdr['CD1_1'], hdr['CD2_2'] = np.array([-1, 1]) * self.pixel_scale_arcsec / 3600.
         hdr['NAXIS1'], hdr['NAXIS2'] = np.ones(2) * self.n_pix
         hdr['CRPIX1'], hdr['CRPIX2'] = np.ones(2) * self.n_pix / 2.
-        hdr['CRVAL1'], hdr['CRVAL2'] = ra_dec_arcsec_offset / 3600.
+        hdr['CRVAL1'], hdr['CRVAL2'] = ra_dec_deg
         if src_type is None:
             if flux_norm:
                 src = self.twod_disk_normed

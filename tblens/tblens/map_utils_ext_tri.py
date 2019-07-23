@@ -8,8 +8,8 @@ from astropy.io import fits
 class SrcGrid(PositionGrid):
     def __init__(self, source_fits, center=True):
         PositionGrid.__init__(self, source_fits, center=center)
-        self.flat_x = self.x_arcsec.flatten()
-        self.flat_y = self.y_arcsec.flatten()
+        self.flat_x = self.x_deg.flatten()
+        self.flat_y = self.y_deg.flatten()
         self.gridcells = np.zeros(self.flat_x.shape[0], dtype=object)
         self.idx = index.Index()
 
@@ -18,8 +18,8 @@ class SrcGrid(PositionGrid):
         self.srcextent_arcsec = self.srcpixelscale_arcsec * self.srchdr['NAXIS1']
 
         for i in range(self.flat_x.shape[0]):
-            cellbounds = (self.flat_x[i]-self.pix_scale_arcsec/2., self.flat_y[i]-self.pix_scale_arcsec/2.,
-                          self.flat_x[i]+self.pix_scale_arcsec/2., self.flat_y[i]+self.pix_scale_arcsec/2.)
+            cellbounds = (self.flat_x[i] - self.pix_scale_deg / 2., self.flat_y[i] - self.pix_scale_deg / 2.,
+                          self.flat_x[i] + self.pix_scale_deg / 2., self.flat_y[i] + self.pix_scale_deg / 2.)
             self.gridcells[i] = box(*cellbounds)
             self.idx.insert(i, cellbounds)
 
@@ -35,9 +35,9 @@ class DeflectionMapExt(DeflectionMap):
 
     def map_image_coord_to_src(self, z_src):
         lens_eff = lens_efficiency(self.z_lens, z_src)
-        xymap = np.zeros((2,)+self.x_arcsec.shape)  # shape is (coordinate, axis_ind1, axis_ind2)
-        xymap[0] = self.x_arcsec + self.xdeflect*lens_eff
-        xymap[1] = self.y_arcsec - self.ydeflect*lens_eff
+        xymap = np.zeros((2,) + self.x_deg.shape)  # shape is (coordinate, axis_ind1, axis_ind2)
+        xymap[0] = self.x_deg + self.xdeflect * lens_eff
+        xymap[1] = self.y_deg - self.ydeflect * lens_eff
         return xymap
 
     def weight_table(self, source_fits='', z_src=None, suffix=''):
@@ -97,7 +97,7 @@ class DeflectionMapExt(DeflectionMap):
     def calc_mag_triangle(self, source_fits='', write_image=True, image_suffix='', z_src=None):
         srcpixelscale_arcsec = fits.getheader(source_fits)['CDELT2'] * 3600
         image = self.calc_image_triangle(source_fits=source_fits, write_image=write_image, image_suffix=image_suffix)
-        return image.sum()/fits.getdata(source_fits).sum() * (self.pix_scale_arcsec / srcpixelscale_arcsec)**2
+        return image.sum()/fits.getdata(source_fits).sum() * (self.pix_scale_deg / srcpixelscale_arcsec) ** 2
 
 
 

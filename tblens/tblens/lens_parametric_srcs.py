@@ -77,7 +77,7 @@ class LensInstance(object):
         inputfile.close()
 
     def run_glafic(self):
-        outfile = file(self.lens_dictionary['prefix']+'_output.txt', 'w')
+        outfile = open(self.lens_dictionary['prefix']+'_output.txt', 'w')
         subprocess.call(['./glafic', self.input_file], stdout=outfile, stderr=outfile)
         outfile.close()
 

@@ -5,14 +5,11 @@ import time
 import sys
 from astropy.table import Table
 
-
-log = file('log.txt', 'w'); sys.stdout = log
 start = time.time()
-
 # Parameter setup
 field_prefix = 'abell2744'
-n_samples_per_src = 50
-print field_prefix, 'nsamples=', n_samples_per_src
+n_samples_per_src = 1
+print(field_prefix, 'nsamples=', n_samples_per_src)
 field_info = Table.read('hfftab', format='ascii')
 field_ind = np.where(field_info['field'] == field_prefix)[0]
 parm_file = 'table_catalog_deepspace%s' % field_prefix
@@ -37,7 +34,7 @@ mass_sampling_pdf = 'mean'
 nulltest = False
 zsampling = 'mean'
 writeimages = True
-defmap = DeflectionMap(xdeflect_fits=xdeflectfits, ydeflect_fits=ydeflectfits, center=False, z_lens=zcluster)
+defmap = DeflectionMap(xdeflect_fits=xdeflectfits, ydeflect_fits=ydeflectfits, z_lens=zcluster)
 for src_ind in src_indices:
     parameter_tracking = Table(names=('mag', 'rcmol', 'mhi', 'relative_ra', 'relative_dec', 'inclination',
                                       'pos_angle', 'rdisk', 'z', 'nz'))
@@ -51,25 +48,20 @@ for src_ind in src_indices:
         theta_20 = sample_inclination_deg()
         z, nz = sample_z(zspec=z_spec[src_ind], pz=pzs[src_ind], zgrid=zgrid, sampling=zsampling, zmean=z_mean[src_ind],
                          zcluster=zcluster)
-        recentered_image_coordinate = defmap.recenter_im_coord(coords_deg[:, src_ind])
-        source_coord_arcsec_rel = defmap.calc_source_positions(recentered_image_coordinate, z)[:, 0]
+        source_coord_deg = defmap.calc_source_position(coords_deg[:, src_ind], z)
         # # HI Disc
         hidisk = HiDisk(rcmol=rcmol, smoothing_height_pix=False, theta_2_0=theta_20, theta_1_0=theta_10,
-                        log10_mhi=mhi, z_src=z, scale_by_rdisk=12, grid_size_min_arcsec=3, minpixelsizecheck=False)
+                        log10_mhi=mhi, z_src=z, scale_by_rdisk=12, grid_size_min_arcsec=3)
 
-        hidisk.writeto_fits('hidisk_twodisk_%04d_%04d.fits' % (src_ind, sample), defmap.header, source_coord_arcsec_rel,
+        hidisk.writeto_fits('hidisk_twodisk_%04d_%04d.fits' % (src_ind, sample), defmap.header, source_coord_deg,
                             flux_norm=True)
-
         mag = defmap.calc_magnification(hidisk.fitsname, write_image=writeimages, z_src=z,
-                                        imagename='image_%04d_%04d' % (src_ind, sample), nulltest=nulltest,
-                                        cutout=False)
-        parameter_tracking.add_row((mag, rcmol, mhi, source_coord_arcsec_rel[0], source_coord_arcsec_rel[1],
+                                        imagename='image_%04d_%04d' % (src_ind, sample), nulltest=nulltest)
+        parameter_tracking.add_row((mag, rcmol, mhi, source_coord_deg[0], source_coord_deg[1],
                                     theta_20, theta_10, hidisk.rdisk_arcsec, z, nz))
 
     parameter_tracking.write('%04d_parmtrack' % src_ind, format='ascii')
 
-
-print 'time taken', time.time()-start
-log.close()
+print('time taken', time.time()-start)
 
 
