@@ -1,9 +1,0 @@
-
-# Only planning to use glafic for tests
-The major problem here is that the HIDiscs represented as tiny gaussians would require a
-1. A huge number of sources to be ray traced as in the case of the galaxy lens
-2. A huge number of pixels to be evaluated.
-As the ray tracing was already taking on the order of days, it would take the same amount of time to just do a single ray tracing
-
-So we would only be able to use a handful of sersic sources. SO would have to fit with a sersic profile then ray trace that and follow through with
-the errors on the fit

@@ -12,11 +12,16 @@ class DeflectionMap(PositionGrid):
     MasterClass for deflections
     TAKES IN NORMALISED DEFLECTION MAPS
     """
-    def __init__(self, xdeflect_fits, ydeflect_fits, z_lens=0.1):
+    def __init__(self, xdeflect_fits, ydeflect_fits, z_lens=0.1, interpolate_position=False):
         PositionGrid.__init__(self, xdeflect_fits)
         self.xdeflect = fits.getdata(xdeflect_fits) / 3600
         self.ydeflect = fits.getdata(ydeflect_fits) / 3600
         self.z_lens = z_lens
+        x = np.arange(self.x_deg.shape[0])
+        y = np.arange(self.y_deg.shape[0])
+        if interpolate_position:
+            self.interpolatedxdeflect = RectBivariateSpline(x, y, self.xdeflect)
+            self.interpolatedydeflect = RectBivariateSpline(x, y, self.ydeflect)
 
     def get_deflection_at_image_position(self, coordinate):
         """
@@ -27,9 +32,21 @@ class DeflectionMap(PositionGrid):
         pos_ind = tuple(np.hstack((decpix, rapix)).astype(int))
         return np.hstack((self.xdeflect[pos_ind], self.ydeflect[pos_ind]))
 
-    def calc_source_position(self, coordinate, z_src):
+    def get_deflection_at_image_position_interpolation(self, coordinate):
+        """
+        :return: value of deflection map at position in image plane
+        """
+        coord = SkyCoord(ra=coordinate[0]*u.deg, dec=coordinate[1]*u.deg)
+        rapix, decpix = coord.to_pixel(self.wcax)
+        return np.hstack((self.interpolatedxdeflect.ev(decpix, rapix), self.interpolatedydeflect.ev(decpix, rapix)))
+
+    def calc_source_position(self, coordinate, z_src, use_interpolation=False):
         """Lens equation. Calculate source positions for many coordinates. coordinates have to be in array format"""
-        deflection = self.get_deflection_at_image_position(coordinate) * lens_efficiency(z_lens=self.z_lens,
+        if use_interpolation:
+            deflection = self.get_deflection_at_image_position_interpolation(coordinate) * lens_efficiency(z_lens=self.z_lens,
+                                                                                             z_src=z_src)
+        else:
+            deflection = self.get_deflection_at_image_position(coordinate) * lens_efficiency(z_lens=self.z_lens,
                                                                                           z_src=z_src)
         source_dec = coordinate[1] - deflection[1]
         source_ra = coordinate[0] + deflection[0] * np.cos(self.center[1] * np.pi/180)

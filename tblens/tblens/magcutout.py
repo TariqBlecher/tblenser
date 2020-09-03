@@ -1,12 +1,12 @@
-from map_utils_core import *
-from grid_creators import *
+from tblens.map_utils_core import *
+from tblens.grid_creators import *
 import astropy.units as u
 
 
 class MagCutTool(PositionGrid):
 
-    def __init__(self, gamma_fits, kappa_fits, center=True, z_lens=0.1):
-        PositionGrid.__init__(self, gamma_fits, center=center)
+    def __init__(self, gamma_fits, kappa_fits,  z_lens=0.1):
+        PositionGrid.__init__(self, gamma_fits)
         self.gamma = fits.getdata(gamma_fits)
         self.kappa = fits.getdata(kappa_fits)
         self.z_lens = z_lens

@@ -19,9 +19,10 @@ class LensInstance(object):
         if self.lens_dictionary['type']=='sie':
             """#lens   sie sigma_kms[1] x[2] y[3] e[4]=0 spherical  theta_e_deg_eastofnorth[5] rcore[6] n/a[7]
             Assume lens is at centre for now."""
-            lens_string = "lens sie %f 0 0 %f %f 0 0" % (self.lens_dictionary['v_sigma_kms'],
+            lens_string = "lens sie %f 0 0 %f %f %f 0" % (self.lens_dictionary['v_sigma_kms'],
                                                          self.lens_dictionary['ellipticity'],
-                                                         self.lens_dictionary['position_angle_deg_eastofnorth'])
+                                                         self.lens_dictionary['position_angle_deg_eastofnorth'],
+                                                          self.lens_dictionary['r_core'])
         else:
             lens_string = 'lens point %e 0 0 0 0 0 0' % (self.lens_dictionary['mass']*(cosmo.H0.value/100.))
         return lens_string

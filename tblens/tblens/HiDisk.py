@@ -48,7 +48,7 @@ class HiDisk(object):
     def solve_for_rdisk(self, log10_mhi, z_src=0.407, log_rdisk_pc_range=None):
         def calc_r1(m_hi):
             """Jing Wang et al. 2016"""
-            return 0.5 * 10**(0.506 * m_hi - 3.293)
+            return  
 
         r1 = calc_r1(log10_mhi) * 1e3
 
@@ -125,9 +125,32 @@ class HiDisk(object):
         src[r < radius_arcsec] = 1
         return src
 
+    def velocity_map(self, v_max, inclination, posangle):
+        y, x = np.mgrid[-self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix,
+                        -self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix]
+        r = np.sqrt(x*x+y*y)
+        phi = np.arctan2(y, x)
+
+        twod_velocity = v_max * (1 - np.exp(- r / self.rdisk_arcsec))
+        velocity_y, velocity_x = np.zeros((2, self.n_pix, self.n_pix, self.n_pix))
+
+        velocity_x[:, :, int(self.n_pix / 2)] = twod_velocity * np.cos(phi)
+        velocity_y[:, :, int(self.n_pix / 2)] = -1 * twod_velocity * np.sin(phi)
+        rotated_vel_x = rotate(velocity_x, inclination, axes=(2, 0), reshape=False)
+        rotated_vel_x = rotate(rotated_vel_x, posangle, axes=(1, 0), reshape=False)
+        rotated_vel_y = rotate(velocity_y, inclination, axes=(2, 0), reshape=False)
+        rotated_vel_y = rotate(rotated_vel_y, posangle, axes=(1, 0), reshape=False)
+
+        return rotated_vel_x, rotated_vel_y
 
 
 
+
+        # den3 = np.zeros((self.n_pix, self.n_pix, self.n_pix))
+        # den3[:, :, int(self.n_pix / 2)] = twod_density
+        # if self.smoothing_height:
+        #     den3 = gaussian_filter1d(den3, self.smoothing_height, axis=2)
+        # np.save('face_on_density', den3)
 
 
 

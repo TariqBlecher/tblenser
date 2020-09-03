@@ -1,4 +1,5 @@
-from map_utils_core import *
+from tblens.map_utils_core import *
+from tblens.grid_creators import *
 from shapely.geometry import box, Polygon
 from rtree import index
 import numpy as np
@@ -6,8 +7,8 @@ from astropy.io import fits
 
 
 class SrcGrid(PositionGrid):
-    def __init__(self, source_fits, center=True):
-        PositionGrid.__init__(self, source_fits, center=center)
+    def __init__(self, source_fits):
+        PositionGrid.__init__(self, source_fits)
         self.flat_x = self.x_deg.flatten()
         self.flat_y = self.y_deg.flatten()
         self.gridcells = np.zeros(self.flat_x.shape[0], dtype=object)
@@ -29,14 +30,13 @@ class DeflectionMapExt(DeflectionMap):
     MasterClass for deflections
     TAKES IN NORMALISED DEFLECTION MAPS
     """
-    def __init__(self, xdeflect_fits, ydeflect_fits, center=True, z_lens=0.1):
-        DeflectionMap.__init__(self, xdeflect_fits, ydeflect_fits, center=center, z_lens=z_lens)
-        print 'Deflection map extension init'
+    def __init__(self, xdeflect_fits, ydeflect_fits,  z_lens=0.1):
+        DeflectionMap.__init__(self, xdeflect_fits, ydeflect_fits, z_lens=z_lens)
 
     def map_image_coord_to_src(self, z_src):
         lens_eff = lens_efficiency(self.z_lens, z_src)
         xymap = np.zeros((2,) + self.x_deg.shape)  # shape is (coordinate, axis_ind1, axis_ind2)
-        xymap[0] = self.x_deg + self.xdeflect * lens_eff
+        xymap[0] = self.x_deg + self.xdeflect * lens_eff * np.cos(self.center[1] * np.pi/180)
         xymap[1] = self.y_deg - self.ydeflect * lens_eff
         return xymap
 
@@ -44,7 +44,7 @@ class DeflectionMapExt(DeflectionMap):
         # # Just have to test and check if the factor extend guess is fine
         xy_ray_traced = self.map_image_coord_to_src(z_src=z_src)
         srcgrid = SrcGrid(source_fits)
-        factorextend = 10  # #Guess
+        factorextend = 20  # #Guess
         areas, src_pix_inds, im_pix_inds = np.zeros((3, factorextend*self.npix**2))
         table_ind = 0
         im_pix_ind = 0
@@ -73,6 +73,7 @@ class DeflectionMapExt(DeflectionMap):
                             src_pix_inds[table_ind] = src_pix_ind
                             im_pix_inds[table_ind] = im_pix_ind
                             table_ind += 1
+
                 boolim = im_pix_inds == im_pix_ind
                 weightnorm = np.sum(areas[boolim])
                 if weightnorm != 0:
