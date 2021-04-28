@@ -48,7 +48,7 @@ class HiDisk(object):
     def solve_for_rdisk(self, log10_mhi, z_src=0.407, log_rdisk_pc_range=None):
         def calc_r1(m_hi):
             """Jing Wang et al. 2016"""
-            return  
+            return 0.5 * 10 ** (0.506 * m_hi - 3.293)
 
         r1 = calc_r1(log10_mhi) * 1e3
 
@@ -62,7 +62,7 @@ class HiDisk(object):
         turn_points = turning_points(function_to_minimise(rdisk_array, r1))
         rdisk_soln_pc = rdisk_array[turn_points[0][0]]
         kpc_per_arcsec_src = cosmo.kpc_proper_per_arcmin(z_src).value / 60.
-        rdisk_arcsec = rdisk_soln_pc*1e-3/kpc_per_arcsec_src
+        rdisk_arcsec = rdisk_soln_pc * 1e-3 / kpc_per_arcsec_src
         return rdisk_arcsec
 
     def face_on_disk(self):
