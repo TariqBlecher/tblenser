@@ -35,7 +35,6 @@ mass_sampling_pdf = 'normal'
 nulltest = False
 zsampling = 'mean'
 writeimages = True
-interpolate_position = False
 defmap = DeflectionMap(xdeflect_fits=xdeflectfits, ydeflect_fits=ydeflectfits, z_lens=zcluster,
                        interpolate_position=interpolate_position)
 for src_ind in src_indices:
@@ -51,7 +50,7 @@ for src_ind in src_indices:
         theta_20 = sample_inclination_deg()
         z, nz = sample_z(zspec=z_spec[src_ind], pz=pzs[src_ind], zgrid=zgrid, sampling=zsampling, zmean=z_mean[src_ind],
                          zcluster=zcluster)
-        source_coord_deg = defmap.calc_source_position(coords_deg[:, src_ind], z, use_interpolation=interpolate_position)
+        source_coord_deg = defmap.calc_source_position(coords_deg[:, src_ind], z)
         # # HI Disc
         hidisk = HiDisk(rcmol=rcmol, smoothing_height_pix=False, theta_2_0=theta_20, theta_1_0=theta_10,
                         log10_mhi=mhi, z_src=z, scale_by_rdisk=12, grid_size_min_arcsec=3)

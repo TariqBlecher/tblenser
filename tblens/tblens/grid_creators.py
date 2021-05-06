@@ -7,6 +7,7 @@ def setup_coordinate_grid(fitsfile, ndim=2):
     """
     2D coordinate grid for x(RA) & y(DEC). x(RA) increases to the left.
     :param fitsfile: file from which grid is calculated
+    :param ndim: dimension of output coordinates
     :return: coordinate grid
     """
     header = fits.getheader(fitsfile)
@@ -23,8 +24,7 @@ def setup_coordinate_grid(fitsfile, ndim=2):
 
 class PositionGrid(object):
     """
-    Contains a 2D coordinate grid.
-     Given a coordinate, can calculats the index of the grid corresponding to that coordinate
+    Useful class for managing 2D grids
     """
     def __init__(self, fitsfile):
         self.wcax = wcs.WCS(fitsfile)

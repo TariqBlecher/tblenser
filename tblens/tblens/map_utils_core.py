@@ -2,43 +2,31 @@ import numpy as np
 from astropy.io import fits
 from scipy.interpolate import RectBivariateSpline
 from astropy.cosmology import Planck15 as cosmo
-from tblens.grid_creators import setup_coordinate_grid, PositionGrid
+from grid_creators import setup_coordinate_grid, PositionGrid
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 
 
 class DeflectionMap(PositionGrid):
     """
-    MasterClass for deflections
-    TAKES IN NORMALISED DEFLECTION MAPS
+    Class for implementing deflections
+    Initialised with a pair of deflection maps in units of arcseconds
     """
-    def __init__(self, xdeflect_fits, ydeflect_fits, z_lens=0.1, interpolate_position=False):
+    def __init__(self, xdeflect_fits, ydeflect_fits, z_lens=0.1):
         PositionGrid.__init__(self, xdeflect_fits)
         self.xdeflect = fits.getdata(xdeflect_fits) / 3600
         self.ydeflect = fits.getdata(ydeflect_fits) / 3600
         self.z_lens = z_lens
-        x = np.arange(self.x_deg.shape[0])
-        y = np.arange(self.y_deg.shape[0])
-        if interpolate_position:
-            self.interpolatedxdeflect = RectBivariateSpline(x, y, self.xdeflect)
-            self.interpolatedydeflect = RectBivariateSpline(x, y, self.ydeflect)
+
 
     def get_deflection_at_image_position(self, coordinate):
         """
-        :return: value of deflection map at position in image plane
+        :return: value of deflection map at image plane coordinate
         """
         coord = SkyCoord(ra=coordinate[0]*u.deg, dec=coordinate[1]*u.deg)
         rapix, decpix = coord.to_pixel(self.wcax)
         pos_ind = tuple(np.hstack((decpix, rapix)).astype(int))
         return np.hstack((self.xdeflect[pos_ind], self.ydeflect[pos_ind]))
-
-    def get_deflection_at_image_position_interpolation(self, coordinate):
-        """
-        :return: value of deflection map at position in image plane
-        """
-        coord = SkyCoord(ra=coordinate[0]*u.deg, dec=coordinate[1]*u.deg)
-        rapix, decpix = coord.to_pixel(self.wcax)
-        return np.hstack((self.interpolatedxdeflect.ev(decpix, rapix), self.interpolatedydeflect.ev(decpix, rapix)))
 
     def calc_source_position(self, coordinate, z_src, use_interpolation=False):
         """Lens equation. Calculate source positions for many coordinates. coordinates have to be in array format"""

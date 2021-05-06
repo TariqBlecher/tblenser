@@ -3,12 +3,13 @@ from scipy.ndimage.filters import gaussian_filter1d
 from scipy.ndimage.interpolation import rotate
 from astropy.cosmology import Planck15 as cosmo
 from astropy.io import fits
-from tblens.utils import turning_points
+from utils import turning_points
 
 
 class HiDisk(object):
     """
-    Grid length must be even(?). pixel sizes are scaled automatically by rdisk
+    HI DISK Simulator, based on the Obreschkow 2009 model
+    Note:Grid length must be even. pixel sizes are scaled automatically by rdisk
     """
     def __init__(self, n_pix=100, x_off_arcsec=0, y_off_arcsec=0, log10_mhi=9, z_src=0.4, rcmol=1.,
                  theta_2_0=0, theta_1_0=0, smoothing_height_pix=False, mass_normalisation=False,
@@ -25,25 +26,24 @@ class HiDisk(object):
         self.grid_length_arcsec = np.ceil(scale_by_rdisk * self.rdisk_arcsec)
         if self.grid_length_arcsec < grid_size_min_arcsec:
             self.grid_length_arcsec = grid_size_min_arcsec
-
         self.pixel_scale_arcsec = self.grid_length_arcsec / self.n_pix
+
+        # # Normalisation
         if mass_normalisation:
             self.normalisation = self.mh / (2 * np.pi * self.rdisk_arcsec ** 2)
         else:
             self.normalisation = 1
         self.flux_JyHz = 10**log10_mhi / (49.7 * cosmo.luminosity_distance(z_src).value ** 2)
-        # # Disk functions
+
+        # # Disk creation
         self.disk = self.face_on_disk()
         self.rotate_disk(theta_deg=theta_2_0)
         self.rotate_disk(theta_deg=theta_1_0, plane_of_rotation=(1, 0))
         self.roll_disk_pix((int(y_off_arcsec / self.pixel_scale_arcsec), int(x_off_arcsec / self.pixel_scale_arcsec)))
         self.twod_disk = np.sum(self.disk, axis=2)
-        # # JyHz arcsec^(-2)
+        # # Convert to units of JyHz arcsec^(-2)
         self.twod_disk_normed = self.twod_disk * self.flux_JyHz/(np.sum(self.twod_disk) * self.pixel_scale_arcsec**2)
 
-
-        # # Utility
-        self.fitsname = ''
 
     def solve_for_rdisk(self, log10_mhi, z_src=0.407, log_rdisk_pc_range=None):
         def calc_r1(m_hi):
@@ -111,6 +111,7 @@ class HiDisk(object):
         self.fitsname = name
 
     def gauss_src(self):
+        """Gaussian source, primarily for testing purposes"""
         y, x = np.mgrid[-self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix,
                         -self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix]
         r = np.sqrt(x*x+y*y)
@@ -118,6 +119,7 @@ class HiDisk(object):
         return gauss_src
 
     def circle(self, radius_arcsec=1):
+        "Circle (disk) source, primarily for testing purposes"
         y, x = np.mgrid[-self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix,
                         -self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix]
         r = np.sqrt(x*x+y*y)
@@ -126,6 +128,7 @@ class HiDisk(object):
         return src
 
     def velocity_map(self, v_max, inclination, posangle):
+        "Velocity map, experimental feature"
         y, x = np.mgrid[-self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix,
                         -self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix]
         r = np.sqrt(x*x+y*y)
@@ -142,15 +145,6 @@ class HiDisk(object):
         rotated_vel_y = rotate(rotated_vel_y, posangle, axes=(1, 0), reshape=False)
 
         return rotated_vel_x, rotated_vel_y
-
-
-
-
-        # den3 = np.zeros((self.n_pix, self.n_pix, self.n_pix))
-        # den3[:, :, int(self.n_pix / 2)] = twod_density
-        # if self.smoothing_height:
-        #     den3 = gaussian_filter1d(den3, self.smoothing_height, axis=2)
-        # np.save('face_on_density', den3)
 
 
 
