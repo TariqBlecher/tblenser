@@ -7,3 +7,4 @@ code\ dump/
 *.npy
 .ipynb_checkpoints
 *.pyc
+Makefile

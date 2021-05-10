@@ -27,8 +27,7 @@ class SrcGrid(PositionGrid):
 
 class DeflectionMapExt(DeflectionMap):
     """
-    MasterClass for deflections
-    TAKES IN NORMALISED DEFLECTION MAPS
+    MasterClass for deflections using the triangle method. This class is not optimised and has mainly been used for testing the accuracy of the pixel center approximation
     """
     def __init__(self, xdeflect_fits, ydeflect_fits,  z_lens=0.1):
         DeflectionMap.__init__(self, xdeflect_fits, ydeflect_fits, z_lens=z_lens)
