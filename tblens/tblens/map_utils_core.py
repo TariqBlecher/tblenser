@@ -9,8 +9,22 @@ import astropy.units as u
 
 class DeflectionMap(PositionGrid):
     """
-    Class for implementing deflections
-    Initialised with a pair of deflection maps in units of arcseconds
+    Class for implementing gravitational lensing. Inherits from PositionGrid which sets up the coordinate system.
+
+    Attributes
+    ----------
+    xdeflect : ndarray
+        2D deflection map in RA direction
+    ydeflect : ndarray
+        2D deflection map in DEC direction
+    z_lens : float
+        redshift of lens
+
+    Methods
+    -------
+    get_deflection_at_image_position(coordinate)
+        
+
     """
     def __init__(self, xdeflect_fits, ydeflect_fits, z_lens=0.1):
         PositionGrid.__init__(self, xdeflect_fits)
@@ -18,37 +32,29 @@ class DeflectionMap(PositionGrid):
         self.ydeflect = fits.getdata(ydeflect_fits) / 3600
         self.z_lens = z_lens
 
-
     def get_deflection_at_image_position(self, coordinate):
         """
         :return: value of deflection map at image plane coordinate
         """
-        coord = SkyCoord(ra=coordinate[0]*u.deg, dec=coordinate[1]*u.deg)
+        coord = SkyCoord(ra=coordinate[0] * u.deg, dec=coordinate[1] * u.deg)
         rapix, decpix = coord.to_pixel(self.wcax)
         pos_ind = tuple(np.hstack((decpix, rapix)).astype(int))
         return np.hstack((self.xdeflect[pos_ind], self.ydeflect[pos_ind]))
 
-    def calc_source_position(self, coordinate, z_src, use_interpolation=False):
+    def calc_source_position(self, coordinate, z_src):
         """Lens equation. Calculate source positions for many coordinates. coordinates have to be in array format"""
-        if use_interpolation:
-            deflection = self.get_deflection_at_image_position_interpolation(coordinate) * lens_efficiency(z_lens=self.z_lens,
-                                                                                             z_src=z_src)
-        else:
-            deflection = self.get_deflection_at_image_position(coordinate) * lens_efficiency(z_lens=self.z_lens,
-                                                                                          z_src=z_src)
+        deflection = self.get_deflection_at_image_position(coordinate) * lens_efficiency(z_lens=self.z_lens, z_src=z_src)
         source_dec = coordinate[1] - deflection[1]
-        source_ra = coordinate[0] + deflection[0] * np.cos(self.center[1] * np.pi/180)
+        source_ra = coordinate[0] + deflection[0] * np.cos(self.center[1] * np.pi / 180)
         return np.hstack((source_ra, source_dec))
 
-    def calc_image_pixel_center(self, source_fits, z_src, write_image=True, imagename='image.npy', nulltest=False):
+    def calc_image_pixel_center(self, source_fits, z_src, write_image=True, imagename='image.npy'):
         """
         Lens equation at each point in image map
         """
-        if nulltest:
-            lens_eff = 0
-        else:
-            lens_eff = lens_efficiency(z_lens=self.z_lens, z_src=z_src)
-        xmap = self.x_deg + self.xdeflect * lens_eff * np.cos(self.center[1] * np.pi/180)
+
+        lens_eff = lens_efficiency(z_lens=self.z_lens, z_src=z_src)
+        xmap = self.x_deg + self.xdeflect * lens_eff * np.cos(self.center[1] * np.pi / 180)
         ymap = self.y_deg - self.ydeflect * lens_eff
         x, y = setup_coordinate_grid(source_fits, ndim=1)
         x = np.flip(x)
@@ -58,28 +64,18 @@ class DeflectionMap(PositionGrid):
             np.save(imagename, image)
         return image
 
-    def calc_magnification(self, sourcefits, z_src, write_image=False, imagename='test', nulltest=False):
-
-        # #Source fits
+    def calc_magnification(self, sourcefits, z_src, write_image=False, imagename='test'):
         srcsum = fits.getdata(sourcefits).sum()
         srchdr = fits.getheader(sourcefits)
         srcpixelscale_deg = srchdr['CDELT2']
 
-        # # Interpolation is necessary to smooth pixelated features
         image = self.calc_image_pixel_center(sourcefits, z_src, write_image=write_image,
-                                             imagename=imagename, nulltest=nulltest)
+                                             imagename=imagename)
 
-        return image.sum()/srcsum * (self.pix_scale_deg / srcpixelscale_deg) ** 2
+        return image.sum() / srcsum * (self.pix_scale_deg / srcpixelscale_deg) ** 2
 
 
 def lens_efficiency(z_lens, z_src):
     dist_lens_source = cosmo.angular_diameter_distance_z1z2(z_lens, z_src).value
     dist_observer_source = cosmo.angular_diameter_distance(z_src).value
-    return dist_lens_source/dist_observer_source
-
-
-
-
-
-
-
+    return dist_lens_source / dist_observer_source

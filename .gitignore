@@ -8,3 +8,5 @@ code\ dump/
 .ipynb_checkpoints
 *.pyc
 Makefile
+.vscode
+

@@ -45,7 +45,7 @@ for ind, name in enumerate(src_names):
         # noinspection PyTypeChecker,PyTypeChecker
         hidisk = HiDisk(n_pix=npix,
                         rcmol=rcmol, smoothing_height_pix=smoothing_height_pix,
-                        theta_2_0=theta_20, theta_1_0=theta_10,
+                        inclination_degrees=theta_20, position_angle_degrees=theta_10,
                         x_off_arcsec=x_off, y_off_arcsec=y_off, log10_mhi=mhi, z_src=z_src[ind], grid_size_min_arcsec=grid_size_min)
 
         prefix = name+'_%s' % sample

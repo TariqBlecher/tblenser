@@ -59,8 +59,8 @@ for src_ind in [227]:
                                  zcluster=zcluster)
                 source_coord_deg = defmap.calc_source_position(coords_deg[:, src_ind], z)
                 # # HI Disc
-                hidisk = HiDisk(rcmol=rcmol, smoothing_height_pix=False, theta_2_0=theta_20, theta_1_0=theta_10,
-                                log10_mhi=mhi, z_src=z, scale_by_rdisk=12, grid_size_min_arcsec=3)
+                hidisk = HiDisk(rcmol=rcmol, smoothing_height_pix=False, inclination_degrees=theta_20, position_angle_degrees=theta_10,
+                                log10_mhi=mhi, z_src=z, grid_scaling_factor=12, grid_size_min_arcsec=3)
 
                 hidisk.writeto_fits('hidisk_twodisk_%04d_%04d.fits' % (src_ind, sample), defmap.header, source_coord_deg,
                                     flux_norm=True)

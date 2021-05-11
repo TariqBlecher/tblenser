@@ -30,7 +30,7 @@ for ind, name in enumerate(src_names):
     # noinspection PyTypeChecker,PyTypeChecker
     hidisk = HiDisk(grid_length_arcsec=grid_length, n_pix=int(grid_length / pix_res_as),
                     rcmol=rcmol, smoothing_height_pix=smoothing_height_pix,
-                    theta_2_0=theta_20, theta_1_0=theta_10,
+                    inclination_degrees=theta_20, position_angle_degrees=theta_10,
                     x_off_arcsec=np.int(x_off / pix_res_as), y_off_arcsec=np.int(y_off / pix_res_as), log10_mhi=mhi, z_src=z_src[ind])
 
     nonparametric_sim = LensPoints(input_file_name=name + '.input', prefix=name, length_arcsec=grid_length,
