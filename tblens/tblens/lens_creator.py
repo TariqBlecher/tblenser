@@ -8,6 +8,25 @@ import numpy as np
 def write_defmap(mass, pixscale, z_lens, sample_fits, ra_off=0, dec_off=0):
     """
     Calculate and write deflection maps given a mass sheet. Note that the lensing efficiency is built into map_utils and so is not implemented here.
+
+    Parameters
+    ----------
+    mass : ndarray
+        Two dimensional array representing mass sheet
+    pixscale : float
+        Pixel size in arcsec
+    z_lens : float
+        redshift of lens
+    sample_fits : str
+        path to template fits file for header generation
+    ra_off : float
+        ra offset in arcsec from template fits file ra reference
+    dec_off : float
+        dec offset in arcsec from template fits file dec reference
+
+    Returns -> None 
+
+    Writes 'deflectionx.fits' and 'deflectiony.fits' 
     """
     D_d = cosmo.angular_diameter_distance(z_lens)
     npix = mass.shape[0]

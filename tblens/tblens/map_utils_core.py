@@ -22,35 +22,73 @@ class DeflectionMap(PositionGrid):
 
     Methods
     -------
+    calc_source_position(coordinate, z_src)
+        Calculates source positions for an image plane coordinate
     get_deflection_at_image_position(coordinate)
-        
-
+        return deflection angle of an image plane coordinate
+    calc_image_pixel_center(source_fits, z_src, write_image=True, imagename='image.npy')
+        Computes lensed image using vectorized lens equation
+    calc_magnification(sourcefits, z_src, write_image=False, imagename='test')
+        Calculates total magnification using calc_image_pixel_center 
     """
     def __init__(self, xdeflect_fits, ydeflect_fits, z_lens=0.1):
+        """
+        Parameters
+        ----------
+        xdeflect_fits : str
+            input fits file specifying the deflections in RA. The coordinate system is also derived from this file header as it is passed to PositionGrid instance.
+        ydeflect_fits : str    
+            input fits file specifying the deflections in DEC
+        z_lens : float
+            redshift of lens
+        """
         PositionGrid.__init__(self, xdeflect_fits)
         self.xdeflect = fits.getdata(xdeflect_fits) / 3600
         self.ydeflect = fits.getdata(ydeflect_fits) / 3600
         self.z_lens = z_lens
 
-    def get_deflection_at_image_position(self, coordinate):
-        """
-        :return: value of deflection map at image plane coordinate
-        """
-        coord = SkyCoord(ra=coordinate[0] * u.deg, dec=coordinate[1] * u.deg)
-        rapix, decpix = coord.to_pixel(self.wcax)
-        pos_ind = tuple(np.hstack((decpix, rapix)).astype(int))
-        return np.hstack((self.xdeflect[pos_ind], self.ydeflect[pos_ind]))
-
     def calc_source_position(self, coordinate, z_src):
-        """Lens equation. Calculate source positions for many coordinates. coordinates have to be in array format"""
+        """Calculates source positions for an image plane coordinate using the lens equation.
+
+        Parameters
+        ----------
+        coordinate : list
+            image plane coordinate in degrees (ra, dec)
+        z_src : float
+             background galaxy redshift
+        Returns: ndarray
+            source plane coordinate
+        """
         deflection = self.get_deflection_at_image_position(coordinate) * lens_efficiency(z_lens=self.z_lens, z_src=z_src)
         source_dec = coordinate[1] - deflection[1]
         source_ra = coordinate[0] + deflection[0] * np.cos(self.center[1] * np.pi / 180)
         return np.hstack((source_ra, source_dec))
 
+    def get_deflection_at_image_position(self, coordinate):
+        """Returns deflection angle at image plane coordinate. """
+        coord = SkyCoord(ra=coordinate[0] * u.deg, dec=coordinate[1] * u.deg)
+        rapix, decpix = coord.to_pixel(self.wcax)
+        pos_ind = tuple(np.hstack((decpix, rapix)).astype(int))
+        return np.hstack((self.xdeflect[pos_ind], self.ydeflect[pos_ind]))
+
     def calc_image_pixel_center(self, source_fits, z_src, write_image=True, imagename='image.npy'):
         """
-        Lens equation at each point in image map
+        Computes lensed image using vectorized lens equation
+
+        Parameters
+        ----------
+        source_fits : str
+            filepath of background source fitsfile
+        z_src : float
+            redshift of source
+        write_image : bool
+            flag to write lensed image to file
+        imagename : str
+            name of lensed image file
+
+        Returns
+        -------
+        ndarray : lensed image
         """
 
         lens_eff = lens_efficiency(z_lens=self.z_lens, z_src=z_src)
@@ -65,6 +103,7 @@ class DeflectionMap(PositionGrid):
         return image
 
     def calc_magnification(self, sourcefits, z_src, write_image=False, imagename='test'):
+        """ Returns total magnification. Shares parameters with calc_image_pixel_center"""
         srcsum = fits.getdata(sourcefits).sum()
         srchdr = fits.getheader(sourcefits)
         srcpixelscale_deg = srchdr['CDELT2']
@@ -76,6 +115,7 @@ class DeflectionMap(PositionGrid):
 
 
 def lens_efficiency(z_lens, z_src):
+    """Calculates the efficiency of the lensing system given source and lens redshifts."""
     dist_lens_source = cosmo.angular_diameter_distance_z1z2(z_lens, z_src).value
     dist_observer_source = cosmo.angular_diameter_distance(z_src).value
     return dist_lens_source / dist_observer_source

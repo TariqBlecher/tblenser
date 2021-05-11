@@ -1,4 +1,12 @@
-# # Driver Script for HFF simulations
+"""
+A high level script to simulate lensed HI disks behind the HFF clusters. 
+
+The first part of this script reads in the relevant parameters of the foreground clusters and background sources.
+
+The second part of the script, consisting of the double for loop, handles the actual lensing simulation and magnification calculation.
+
+The outer for-loop runs over all background sources while the inner for-loop runs over the nsamples of each source. Sources are sampled multiple times in order to marginalise over uncertain or nuisance parameters.
+"""
 
 import numpy as np
 from tblens.map_utils_core import DeflectionMap

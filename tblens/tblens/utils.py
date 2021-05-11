@@ -1,3 +1,7 @@
+"""
+A holding module for tblenser utility functions
+"""
+
 import numpy as np
 from astropy.cosmology import Planck15 as cosmo
 
@@ -9,6 +13,7 @@ def HI_mass_size_relation(log10_mhi):
 
 
 def set_borders_to_zero(array_2d):
+    """Sets the edges of a 2D array to zero. Useful for preventing interpolation errors."""
     array_2d[:1, :] = 0
     array_2d[:, :1] = 0
     array_2d[-1:, :] = 0
@@ -17,6 +22,7 @@ def set_borders_to_zero(array_2d):
 
 
 def convert_pc_to_arcsec(length_pc, z):
+    """Converts length in parsec to an angle in arcsec at a redshift, z"""
     kpc_per_arcsec_src = cosmo.kpc_proper_per_arcmin(z).value / 60.
     length_arcsec = length_pc * 1e-3 / kpc_per_arcsec_src
     return length_arcsec
@@ -24,11 +30,12 @@ def convert_pc_to_arcsec(length_pc, z):
 
 def mass_sampling(pdf='uniform', uniform_lower_bound=8.5, uniform_width=2.5, mass_mean_log10=9, mass_sig_log10=1,
                   lower_limit=6., upper_limit=11.):
+    """Samples HI mass with a few different PDFs"""
     if pdf == 'uniform':
         mhi = np.random.rand() * uniform_width + uniform_lower_bound
     elif pdf == 'normal':
         mhi = np.log10(np.random.lognormal(np.log(10 ** mass_mean_log10), np.log(10 ** mass_sig_log10)))
-        if mhi < lower_limit:
+        if mhi < lower_limit: 
             mhi = lower_limit
         elif mhi > upper_limit:
             mhi = upper_limit
@@ -38,6 +45,7 @@ def mass_sampling(pdf='uniform', uniform_lower_bound=8.5, uniform_width=2.5, mas
 
 
 def sample_z(zmean=None, zspec=None):
+    """Choose redshift. Support for redshift PDF dropped, see previous versions of code to reimplement if needed."""
     if zspec > 0:
         z = zspec
     else:
@@ -46,6 +54,7 @@ def sample_z(zmean=None, zspec=None):
 
 
 def sample_inclination_deg():
+    """Randomly sample inclination angle with an upper limit of 89 degrees"""
     success = 0
     while success == 0:
         inclination = np.random.rand() * 90.
@@ -58,15 +67,8 @@ def sample_inclination_deg():
     return inclination
 
 
-def rand_signs(size=None):
-    r = np.random.rand(size)
-    signs = np.ones(size)
-    negs = r <= 0.5
-    signs[negs] = -1
-    return signs
-
-
 def rand_sign():
+    """random positive/negative sign generator"""
     r = np.random.rand()
     if r > 0.5:
         return 1
@@ -75,10 +77,10 @@ def rand_sign():
 
 
 def turning_points(array):
-    ''' turning_points(array) -> min_indices, max_indices
+    """ 
     Finds the turning points within an 1D array and returns the indices of the minimum and
     maximum turning points in two separate lists.
-    '''
+    """
     idx_maxima, idx_minima = [], []
 
     NEUTRAL, RISING, FALLING = range(3)
