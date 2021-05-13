@@ -14,9 +14,9 @@ class DeflectionMap(PositionGrid):
     Attributes
     ----------
     xdeflect : ndarray
-        2D deflection map in RA direction
+        2D deflection map in RA direction in units of degrees
     ydeflect : ndarray
-        2D deflection map in DEC direction
+        2D deflection map in DEC direction in units of degrees
     z_lens : float
         redshift of lens
 
@@ -43,9 +43,14 @@ class DeflectionMap(PositionGrid):
             redshift of lens
         """
         PositionGrid.__init__(self, xdeflect_fits)
-        self.xdeflect = fits.getdata(xdeflect_fits) / 3600
-        self.ydeflect = fits.getdata(ydeflect_fits) / 3600
+        self.initialise_deflection_angles(xdeflect_fits=xdeflect_fits, ydeflect_fits=ydeflect_fits)
         self.z_lens = z_lens
+
+    def initialise_deflection_angles(self, xdeflect_fits, ydeflect_fits):
+        arcseconds_to_degrees = 3600
+        self.xdeflect = fits.getdata(xdeflect_fits) / arcseconds_to_degrees
+        self.ydeflect = fits.getdata(ydeflect_fits) / arcseconds_to_degrees
+        print('Be sure that the deflection angle are in units of arcseconds')
 
     def calc_source_position(self, coordinate, z_src):
         """Calculates source positions for an image plane coordinate using the lens equation.
@@ -108,8 +113,7 @@ class DeflectionMap(PositionGrid):
         srchdr = fits.getheader(sourcefits)
         srcpixelscale_deg = srchdr['CDELT2']
 
-        image = self.calc_image_pixel_center(sourcefits, z_src, write_image=write_image,
-                                             imagename=imagename)
+        image = self.calc_image_pixel_center(sourcefits, z_src, write_image=write_image,imagename=imagename)
 
         return image.sum() / srcsum * (self.pix_scale_deg / srcpixelscale_deg) ** 2
 

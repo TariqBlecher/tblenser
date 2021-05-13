@@ -7,9 +7,9 @@ from astropy.cosmology import Planck15 as cosmo
 
 
 def HI_mass_size_relation(log10_mhi):
-    """HI Mass-size relation - Jing Wang et al. 2016"""
-    r_1_kpc = 0.5 * 10 ** (0.506 * log10_mhi - 3.293)
-    return r_1_kpc
+    """HI Mass-size relation - Jing Wang et al. 2016. Returns radius not diameter."""
+    r_1_pc = 1e3 * 0.5 * 10 ** (0.506 * log10_mhi - 3.293)
+    return r_1_pc
 
 
 def set_borders_to_zero(array_2d):
@@ -76,10 +76,10 @@ def rand_sign():
         return -1
 
 
-def turning_points(array):
+def find_turning_points(array):
     """ 
-    Finds the turning points within an 1D array and returns the indices of the minimum and
-    maximum turning points in two separate lists.
+    Brute force algorithm to find the turning points within an 1D array and returns the indices of the minimum and
+    maximum turning points in two separate lists. Only suitable for smooth, noise-less functions. 
     """
     idx_maxima, idx_minima = [], []
 

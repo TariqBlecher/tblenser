@@ -3,7 +3,7 @@ GLAFIC
 Notebooks/glafic
 code\ dump/
 .gitignore
-*.egg
+**/*.egg*/
 *.npy
 .ipynb_checkpoints
 *.pyc

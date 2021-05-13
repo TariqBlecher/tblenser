@@ -1,4 +1,0 @@
-src mhi z_src z_lens v_lens l_e theta_l impact_factor_min impact_factor_max v_lens_sig u_mhi
-J1106+5528 9.39 0.407 0.095 262 0.24 45.5 0. 0.1 13 0.33
-J1250-0135 9.69 0.353 0.087 246 0.3 125.3 0. 0.2 12 0.31
-J1143-0144 9.54 0.402 0.106 269 0.25 118.7 0.2 0.4 13 0.34
