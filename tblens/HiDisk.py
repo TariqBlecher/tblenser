@@ -1,43 +1,48 @@
+"""This module defines only one object, HiDisk, which instantiates a neutral hydrogen (HI) galactic disk. See documentation of HiDisk.HiDisk for details."""
+
+import logging
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.ndimage.interpolation import rotate
 from astropy.cosmology import Planck15 as cosmo
 from astropy.io import fits
 from utils import find_turning_points, convert_pc_to_arcsec, set_borders_to_zero, HI_mass_size_relation
-
+logger = logging.getLogger(__name__)
 
 class HiDisk(object):
     """
-    This class creates a 3D HI disk based on the Obreschkow 2009 model.
+    This class creates an axisymmetric neutral hydrogen (HI) disk. 
+    
+    The radial mass density profile is based on the Obreschkow et al. (2009) model, however in constrast to Obreschkow (2009), the exponential scale radius (rdisk) is set with the constraint of the HI mass-size relation. Note that the total length of the coordinate grid is set dynamically based on the size of the HI disk. 
 
     Attributes
     ----------
     mh : float
         Total hydrogen mass of galaxy (atomic and molecular)
     n_pix : int
-        Number of pixels spanning the length of the 3D grid
+        Number of pixels spanning the length of the grid
     log10_mhi : float
         log (base 10) of the total HI mass
     rcmol : float
-        A quantity related to the ratio of H2/HI in the Obreschkow 2009 model
-    smoothing_height_pix : float / False
-        Gaussian smoothing height of disk (False for no smoothing)
+        A quantity which determines the ratio of H2/HI in the Obreschkow (2009) model
+    smoothing_height_pix : float 
+        Gaussian smoothing height of disk (0. for thin disk, i.e. no smoothing)
     r1_pc : float
         Radius at which HI density reaches 1 Msun pc^(-2)
     rdisk_arcsec : float
-        Exponential scale length of Hydrogen disk
+        Exponential scale length of Hydrogen disk in units of arcsec
     flux_JyHz : float
         Total flux of source in JyHz
     grid_length_arcsec : float
         Length of coordinate grid in arcsec
     pixel_scale_arcsec : float
-        pixel size in arcsec
+        pixel length in arcsec
     z_src : float
         redshift of source
     x : np.ndarray
-        2D numpy array representing RA across the grid. Centered at zero.
+        2D numpy array representing RA coordinates of each pixel of the grid. Centered at zero.
     y : np.ndarray
-        2D numpy array representing DEC across the grid. Centered at zero.
+        2D numpy array representing DEC coordinates of each pixel of the grid. Centered at zero.
     r: np.ndarray
         2D numpy array representing radius from center across the grid. Centered at zero.
     disk : np.ndarray
@@ -45,25 +50,33 @@ class HiDisk(object):
     twod_disk : np.ndarray
         2D numpy array of HI disk
     twod_disk_normed : np.ndarray
-        2D numpy array of flux-normalised HI disk
+        2D numpy array of flux-normalised HI disk in units of JyHz arcsec^(-2)
 
     Methods
     -------
+    set_grid_length
+        Sets grid length relative to the size of the HI disk
+    normalise_flux_to_units_of_JyHz_per_arcsec_squared
+        Flux normalisation of twod_disk attribute
+    HI_flux
+        Calculates HI flux in JyHz, ref: Meyer (2017)
+    total_hydrogen_mass
+        Calculates total Hydrogen (HI+H2) mass from rcmol and mhi
     solve_for_rdisk(log_rdisk_pc_range=(2, 6))
-        Estimate rdisk based on R1, MHI, MTotal within Obreschkow 2009 model & HI mass-size relation
+        Estimate rdisk by constraining the Obreschkow 2009 model with the HI mass-size relation
     create_grid()
-        Create coordinate grid corresponding to x,y,r
+        Create 2D coordinate systems corresponding to x, y and r
     create_face_on_disk()
         Create face-on 3D HI Disk
     rotate_disk(theta_deg=2, plane_of_rotation=(2, 0), reshape=False)
-        Rotate 3D HI disk
+        Rotate 3D HI disk. Wraps np.rotate.
     update_fits_header(hdr, ra_dec_deg)
-        Create fits header for HI disk from template, usually lens fits header
+        Create fits header for HI disk from template, which is usually the lens map fits header
     writeto_fits(name, hdr, ra_dec_deg, flux_norm=False)
         Writes HI disk to fits file
     """
     def __init__(self, n_pix=100, log10_mhi=9, z_src=0.4, rcmol=1., inclination_degrees=0, position_angle_degrees=0,
-                 smoothing_height_pix=False, grid_scaling_factor=10, grid_size_min_arcsec=3.):
+                 smoothing_height_pix=0, grid_scaling_factor=10):
         """
         Parameters
         ----------
@@ -74,59 +87,55 @@ class HiDisk(object):
         z_src : float
             redshift of source
         rcmol : float
-            A quantity related to the ratio of H2/HI in the Obreschkow 2009 model
+            A quantity which determines the ratio of H2/HI in the Obreschkow (2009) model
         inclination_degrees : float
             HI disk inclination angle in degrees [0, 90]
         position_angle_degrees : float
             HI disk position angle in degrees [0, 180]
-        smoothing_height_pix : float / False
-            Gaussian smoothing height of disk (False for no smoothing)
+        smoothing_height_pix : float 
+            Gaussian smoothing height of disk (0. for thin disk, i.e. no smoothing)
         grid_scaling_factor : float
             Sets grid_length via grid_length = grid_scaling_factor * rdisk
-        grid_size_min_arcsec : float
-            Lower bound on grid length
         """
-
-        # # Fundamental physical parameters
-        self.Rcmol = rcmol
+        
+        self.rcmol = rcmol
         self.smoothing_height_pix = smoothing_height_pix
         self.log10_mhi = log10_mhi
         self.z_src = z_src
-        self.mh = self.total_hydrogen_mass(log10_mhi, rcmol) 
+        self.mh = self.total_hydrogen_mass() 
         self.r1_pc = HI_mass_size_relation(log10_mhi) 
         self.rdisk_arcsec = self.solve_for_rdisk()
-        self.flux_JyHz = self.HIFlux(log10_mhi, z_src)
+        self.flux_JyHz = self.HI_flux()
 
-        # # Grid properties
         self.n_pix = n_pix
         self.grid_length_arcsec = self.set_grid_length(grid_scaling_factor)
         self.pixel_scale_arcsec = self.grid_length_arcsec / self.n_pix
 
-        # # Disk creation
         self.create_grid()
         self.create_face_on_disk()
         self.rotate_disk(theta_deg=inclination_degrees)
         self.rotate_disk(theta_deg=position_angle_degrees, plane_of_rotation=(1, 0))
         self.twod_disk = np.sum(self.disk, axis=2)
-        self.twod_disk_normed = self.convert_to_units_of_JyHz_per_arcsec_squared()
+        self.twod_disk_normed = self.normalise_flux_to_units_of_JyHz_per_arcsec_squared()
 
     def set_grid_length(self, grid_scaling_factor):
         """Sets grid length relative to the size of the HI disk"""
         grid_length_arcsec = np.ceil(grid_scaling_factor * self.rdisk_arcsec)
         if grid_scaling_factor < 6:
-            print('Warning: grid_scaling_factor < 6, the full HI distribution may not be captured.')
+            logger.warning('grid_scaling_factor < 6, the full HI distribution may not be captured.')
         return grid_length_arcsec
 
-    def convert_to_units_of_JyHz_per_arcsec_squared(self):
+    def normalise_flux_to_units_of_JyHz_per_arcsec_squared(self):
+        """Flux normalisation of twod_disk attribute"""
         return self.twod_disk * self.flux_JyHz / (np.sum(self.twod_disk) * self.pixel_scale_arcsec**2)
 
-    def HIFlux(self, log10_mhi, z_src):
+    def HI_flux(self):
         """Calculates HI flux in JyHz, ref: Meyer (2017)"""
-        return 10**log10_mhi / (49.7 * cosmo.luminosity_distance(z_src).value ** 2)
+        return 10**self.log10_mhi / (49.7 * cosmo.luminosity_distance(self.z_src).value ** 2)
 
-    def total_hydrogen_mass(self, log10_mhi, rcmol):
-        """ Calculates total Hydrogen (HI+H2) mass, ref: Obreschkow 2009"""
-        return 10 ** log10_mhi * (1 + (3.44 * rcmol**(-0.506) + 4.82 * rcmol**(-1.054))**-1)
+    def total_hydrogen_mass(self):
+        """Calculates total Hydrogen (HI+H2) mass, ref: Obreschkow 2009"""
+        return 10 ** self.log10_mhi * (1 + (3.44 * self.rcmol**(-0.506) + 4.82 * self.rcmol**(-1.054))**-1)
 
     def solve_for_rdisk(self, log_rdisk_pc_range=(2, 6)):
         """This function finds a value of rdisk which satisfies the condition that the HI mass density at r=R1 is 1 Msun/pc^2.
@@ -148,7 +157,7 @@ class HiDisk(object):
 
         def residual_density_at_r1_squared(r_disk):
             """This function is minimised in order to solve for rdisk. density equation ref : Obreschkow (2009)"""
-            density_at_r1 = self.mh / (2 * np.pi * r_disk ** 2) * np.exp(-self.r1_pc / r_disk) / (1 + self.Rcmol * np.exp(-1.6 * self.r1_pc / r_disk))
+            density_at_r1 = self.mh / (2 * np.pi * r_disk ** 2) * np.exp(-self.r1_pc / r_disk) / (1 + self.rcmol * np.exp(-1.6 * self.r1_pc / r_disk))
             return (density_at_r1 - 1)**2
 
         rdisk_search_space = np.logspace(log_rdisk_pc_range[0], log_rdisk_pc_range[1], 4000)
@@ -166,7 +175,7 @@ class HiDisk(object):
 
     def create_face_on_disk(self):
         """Creates face-on 3D HI disk, density ref : Obreschkow (2009)"""
-        twod_density = np.exp(- self.r / self.rdisk_arcsec) / (1 + self.Rcmol * np.exp(-1.6 * self.r / self.rdisk_arcsec))
+        twod_density = np.exp(- self.r / self.rdisk_arcsec) / (1 + self.rcmol * np.exp(-1.6 * self.r / self.rdisk_arcsec))
         self.disk = np.zeros((self.n_pix, self.n_pix, self.n_pix))
         self.disk[:, :, int(self.n_pix / 2)] = twod_density
         if self.smoothing_height_pix:
