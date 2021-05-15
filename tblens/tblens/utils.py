@@ -7,9 +7,10 @@ from astropy.cosmology import Planck15 as cosmo
 
 
 def HI_mass_size_relation(log10_mhi):
-    """HI Mass-size relation - Jing Wang et al. 2016. Returns radius not diameter."""
-    r_1_pc = 1e3 * 0.5 * 10 ** (0.506 * log10_mhi - 3.293)
-    return r_1_pc
+    """HI Mass-size relation - Jing Wang et al. 2016. Returns R1 radius (not diameter) in parsec."""
+    diameter_1_kpc = 10 ** (0.506 * log10_mhi - 3.293)
+    r1_pc = 1e3 * 0.5 * diameter_1_kpc
+    return r1_pc
 
 
 def set_borders_to_zero(array_2d):

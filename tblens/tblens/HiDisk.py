@@ -6,14 +6,16 @@ from scipy.ndimage.filters import gaussian_filter1d
 from scipy.ndimage.interpolation import rotate
 from astropy.cosmology import Planck15 as cosmo
 from astropy.io import fits
-from utils import find_turning_points, convert_pc_to_arcsec, set_borders_to_zero, HI_mass_size_relation
-logger = logging.getLogger(__name__)
+from tblens.utils import find_turning_points, convert_pc_to_arcsec, set_borders_to_zero, HI_mass_size_relation
+
 
 class HiDisk(object):
     """
     This class creates an axisymmetric neutral hydrogen (HI) disk. 
     
-    The radial mass density profile is based on the Obreschkow et al. (2009) model, however in constrast to Obreschkow (2009), the exponential scale radius (rdisk) is set with the constraint of the HI mass-size relation. Note that the total length of the coordinate grid is set dynamically based on the size of the HI disk. 
+    The radial mass density profile is based on the Obreschkow et al. (2009) model, however in constrast to Obreschkow (2009), the exponential scale radius (rdisk) is set under the constraint of the HI mass-size relation, see Blecher et al. (2019) for details.
+    
+    Note that the total length of the coordinate grid is set dynamically based on the size of the HI disk. 
 
     Attributes
     ----------
@@ -45,11 +47,11 @@ class HiDisk(object):
         2D numpy array representing DEC coordinates of each pixel of the grid. Centered at zero.
     r: np.ndarray
         2D numpy array representing radius from center across the grid. Centered at zero.
-    disk : np.ndarray
+    disk_3d : np.ndarray
         3D numpy array of HI disk
-    twod_disk : np.ndarray
+    disk_2d : np.ndarray
         2D numpy array of HI disk
-    twod_disk_normed : np.ndarray
+    disk_2d_flux_normalised : np.ndarray
         2D numpy array of flux-normalised HI disk in units of JyHz arcsec^(-2)
 
     Methods
@@ -68,14 +70,12 @@ class HiDisk(object):
         Create 2D coordinate systems corresponding to x, y and r
     create_face_on_disk()
         Create face-on 3D HI Disk
-    rotate_disk(theta_deg=2, plane_of_rotation=(2, 0), reshape=False)
-        Rotate 3D HI disk. Wraps np.rotate.
     update_fits_header(hdr, ra_dec_deg)
         Create fits header for HI disk from template, which is usually the lens map fits header
     writeto_fits(name, hdr, ra_dec_deg, flux_norm=False)
         Writes HI disk to fits file
     """
-    def __init__(self, n_pix=100, log10_mhi=9, z_src=0.4, rcmol=1., inclination_degrees=0, position_angle_degrees=0,
+    def __init__(self, n_pix=100, log10_mhi=9, z_src=0.4, rcmol=1., inclination_angle_degrees=0, position_angle_degrees=0,
                  smoothing_height_pix=0, grid_scaling_factor=10):
         """
         Parameters
@@ -97,37 +97,41 @@ class HiDisk(object):
         grid_scaling_factor : float
             Sets grid_length via grid_length = grid_scaling_factor * rdisk
         """
-        
+        self.logger = logging.getLogger('tblens.HiDisk.HiDisk')
         self.rcmol = rcmol
         self.smoothing_height_pix = smoothing_height_pix
         self.log10_mhi = log10_mhi
         self.z_src = z_src
+        self.n_pix = n_pix
+
         self.mh = self.total_hydrogen_mass() 
         self.r1_pc = HI_mass_size_relation(log10_mhi) 
         self.rdisk_arcsec = self.solve_for_rdisk()
         self.flux_JyHz = self.HI_flux()
 
-        self.n_pix = n_pix
         self.grid_length_arcsec = self.set_grid_length(grid_scaling_factor)
         self.pixel_scale_arcsec = self.grid_length_arcsec / self.n_pix
 
-        self.create_grid()
-        self.create_face_on_disk()
-        self.rotate_disk(theta_deg=inclination_degrees)
-        self.rotate_disk(theta_deg=position_angle_degrees, plane_of_rotation=(1, 0))
-        self.twod_disk = np.sum(self.disk, axis=2)
-        self.twod_disk_normed = self.normalise_flux_to_units_of_JyHz_per_arcsec_squared()
+        self.x, self.y, self.r = self.create_grid()
+        self.disk_3d = self.create_face_on_disk()
+        self.disk_3d = rotate(self.disk_3d, inclination_angle_degrees, axes=(2, 0), reshape=False)
+        self.disk_3d = rotate(self.disk_3d, position_angle_degrees, axes=(1,0),reshape=False)
+        self.disk_2d = np.sum(self.disk_3d, axis=2)
+        self.disk_2d_flux_normalised = self.normalise_flux_to_units_of_JyHz_per_arcsec_squared()
 
     def set_grid_length(self, grid_scaling_factor):
         """Sets grid length relative to the size of the HI disk"""
         grid_length_arcsec = np.ceil(grid_scaling_factor * self.rdisk_arcsec)
         if grid_scaling_factor < 6:
-            logger.warning('grid_scaling_factor < 6, the full HI distribution may not be captured.')
+            self.logger.warning('grid_scaling_factor < 6, the full HI distribution may not be captured.')
+        elif grid_scaling_factor > 20:
+            self.logger.warning('grid_scaling_factor > 20, the HI distribution may suffer from pixelisation errors.')
+
         return grid_length_arcsec
 
     def normalise_flux_to_units_of_JyHz_per_arcsec_squared(self):
         """Flux normalisation of twod_disk attribute"""
-        return self.twod_disk * self.flux_JyHz / (np.sum(self.twod_disk) * self.pixel_scale_arcsec**2)
+        return self.disk_2d * self.flux_JyHz / (np.sum(self.disk_2d) * self.pixel_scale_arcsec**2)
 
     def HI_flux(self):
         """Calculates HI flux in JyHz, ref: Meyer (2017)"""
@@ -138,21 +142,19 @@ class HiDisk(object):
         return 10 ** self.log10_mhi * (1 + (3.44 * self.rcmol**(-0.506) + 4.82 * self.rcmol**(-1.054))**-1)
 
     def solve_for_rdisk(self, log_rdisk_pc_range=(2, 6)):
-        """This function finds a value of rdisk which satisfies the condition that the HI mass density at r=R1 is 1 Msun/pc^2.
+        """This function finds a value of rdisk which satisfies the HI-mass size relation.
 
-            Note that in this particular model, there are two numerical solutions for rdisk. The first puts most of the HI mass
-            before R1 while the second puts most of the HI mass after R1. As the second scenario is unphysical,
-            we pick the first solution to rdisk.
+            Note that in the Obreschkow (2009) model, there can be two numerical solutions for rdisk. The first solution puts most of the HI mass at r<R1 while the second solution puts most of the HI mass at r>R1. As the second scenario is unphysical, we choose the first solution to rdisk.
 
             Parameters
             ----------
             log_rdisk_pc_range : tuple
-                lower and upper bounds to search for rdisk solution, syntax : (lower, upper). Current default values are (100 pc, 100 kpc) should catch all physically possibly HI disc. However, if there is a crash with IndexError: list index out of range, it means that a minimum for rdisk is not found within bounds.
+                lower and upper bounds to search for rdisk solution, syntax : (lower, upper). The current default values are (100 pc, 100 kpc) which should be fine for all physically possible HI disks. However, if there is a crash with 'IndexError: list index out of range', it means that a minimum for rdisk is not found within bounds.
 
             Returns
             -------
             float
-                solution for rdisk in parcsec
+                solution for rdisk in parsec
         """
 
         def residual_density_at_r1_squared(r_disk):
@@ -169,21 +171,19 @@ class HiDisk(object):
 
     def create_grid(self):
         """Creates standard 2D coordinate arrays"""
-        self.y, self.x = np.mgrid[-self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix,
+        y, x = np.mgrid[-self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix,
                                   -self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix]
-        self.r = np.sqrt(self.x * self.x + self.y * self.y)
+        r = np.sqrt(self.x * self.x + self.y * self.y)
+        return x, y, r
 
     def create_face_on_disk(self):
         """Creates face-on 3D HI disk, density ref : Obreschkow (2009)"""
         twod_density = np.exp(- self.r / self.rdisk_arcsec) / (1 + self.rcmol * np.exp(-1.6 * self.r / self.rdisk_arcsec))
-        self.disk = np.zeros((self.n_pix, self.n_pix, self.n_pix))
-        self.disk[:, :, int(self.n_pix / 2)] = twod_density
+        disk_3d = np.zeros((self.n_pix, self.n_pix, self.n_pix))
+        disk_3d[:, :, int(self.n_pix / 2)] = twod_density
         if self.smoothing_height_pix:
-            self.disk = gaussian_filter1d(self.disk, self.smoothing_height_pix, axis=2)
-
-    def rotate_disk(self, theta_deg=2, plane_of_rotation=(2, 0), reshape=False):
-        """Rotates 3D HI disk"""
-        self.disk = rotate(self.disk, theta_deg, axes=plane_of_rotation, reshape=reshape)
+            disk_3d = gaussian_filter1d(disk_3d, self.smoothing_height_pix, axis=2)
+        return disk_3d
 
     def update_fits_header(self, hdr, ra_dec_deg):
         """Create fits header for HI disk from template, usually lens fits header"""
@@ -198,9 +198,9 @@ class HiDisk(object):
         """Writes HI disk to fits file"""
         hdr = self.update_fits_header(hdr, ra_dec_deg)
         if flux_norm:
-            src = self.twod_disk_normed
+            src = self.disk_2d_flux_normalised
         else:
-            src = self.twod_disk
+            src = self.disk_2d
         src = set_borders_to_zero(src)  # Avoids interpolation errors in lensing
         fits.writeto(name, src, hdr, overwrite=True)
         self.fitsname = name

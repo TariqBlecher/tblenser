@@ -1,8 +1,11 @@
+"""This module contains the class 'DeflectionMap' which simulates gravitational lensing using the lens equation."""
+
+import logging
 import numpy as np
 from astropy.io import fits
 from scipy.interpolate import RectBivariateSpline
 from astropy.cosmology import Planck15 as cosmo
-from grid_creators import setup_coordinate_grid, PositionGrid
+from tblens.grid_creators import setup_coordinate_grid, PositionGrid
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 
@@ -25,7 +28,7 @@ class DeflectionMap(PositionGrid):
     calc_source_position(coordinate, z_src)
         Calculates source positions for an image plane coordinate
     get_deflection_at_image_position(coordinate)
-        return deflection angle of an image plane coordinate
+        returns deflection angle of an image plane coordinate
     calc_image_pixel_center(source_fits, z_src, write_image=True, imagename='image.npy')
         Computes lensed image using vectorized lens equation
     calc_magnification(sourcefits, z_src, write_image=False, imagename='test')
@@ -43,14 +46,16 @@ class DeflectionMap(PositionGrid):
             redshift of lens
         """
         PositionGrid.__init__(self, xdeflect_fits)
+        self.logger = logging.getLogger('tblens.map_utils_core.DeflectionMap')
         self.initialise_deflection_angles(xdeflect_fits=xdeflect_fits, ydeflect_fits=ydeflect_fits)
         self.z_lens = z_lens
 
     def initialise_deflection_angles(self, xdeflect_fits, ydeflect_fits):
+        """Reads in deflection maps and converts values from arcseconds to degrees"""
         arcseconds_to_degrees = 3600
         self.xdeflect = fits.getdata(xdeflect_fits) / arcseconds_to_degrees
         self.ydeflect = fits.getdata(ydeflect_fits) / arcseconds_to_degrees
-        print('Be sure that the deflection angle are in units of arcseconds')
+        self.logger.debug('We assume that the deflection angles are in units of arcseconds')
 
     def calc_source_position(self, coordinate, z_src):
         """Calculates source positions for an image plane coordinate using the lens equation.

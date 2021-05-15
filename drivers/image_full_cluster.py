@@ -7,7 +7,7 @@ The second part of the script, consisting of the double for loop, handles the ac
 
 The outer for-loop runs over all background sources while the inner for-loop runs over the nsamples of each source. Sources are sampled multiple times in order to marginalise over uncertain or nuisance parameters.
 """
-
+import logging
 import numpy as np
 from tblens.map_utils_core import DeflectionMap
 from tblens.HiDisk import HiDisk
@@ -15,7 +15,8 @@ from tblens.utils import sample_inclination_deg, sample_z, mass_sampling
 import time
 import os
 from astropy.table import Table
-from dataclasses import dataclass
+
+logging.basicConfig(filename='image_full_cluster.log')
 start = time.time()
 
 # # Configuration
@@ -65,7 +66,7 @@ for src_ind in src_indices:
         # # HI disk creation
         source_coord_deg = defmap.calc_source_position(coords_deg[:, src_ind], z)
 
-        hidisk = HiDisk(rcmol=rcmol, smoothing_height_pix=False, inclination_degrees=inclination_angle_deg, position_angle_degrees=position_angle_deg, log10_mhi=mhi, z_src=z, grid_scaling_factor=12, grid_size_min_arcsec=3)
+        hidisk = HiDisk(rcmol=rcmol, smoothing_height_pix=False, inclination_angle_degrees=inclination_angle_deg, position_angle_degrees=position_angle_deg, log10_mhi=mhi, z_src=z, grid_scaling_factor=12)
 
         hidisk.writeto_fits('hidisk_twodisk_%04d_%04d.fits' % (src_ind, sample), defmap.header, source_coord_deg,
                             flux_norm=True)
@@ -82,4 +83,4 @@ for src_ind in src_indices:
     if not writeimages:
         os.system('rm hidisk_twodisk_%04d*.fits' % src_ind)
 
-print('time taken', time.time() - start)
+logging.warning('time taken = %s', time.time() - start)
