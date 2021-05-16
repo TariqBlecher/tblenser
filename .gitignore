@@ -1,0 +1,12 @@
+.idea
+GLAFIC
+Notebooks/glafic
+code\ dump/
+.gitignore
+**.egg*
+*.npy
+.ipynb_checkpoints
+*.pyc
+Makefile
+.vscode
+
