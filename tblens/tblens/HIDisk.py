@@ -1,4 +1,4 @@
-"""This module defines only one object, HiDisk, which instantiates a neutral hydrogen (HI) galactic disk. See documentation of HiDisk.HiDisk for details."""
+"""This module defines only one object, HIDisk, which creates a neutral atomic hydrogen (HI) gas disk. See documentation of HIDisk.HIDisk for details."""
 
 import logging
 import numpy as np
@@ -9,13 +9,13 @@ from astropy.io import fits
 from tblens.utils import find_turning_points, convert_pc_to_arcsec, set_borders_to_zero, HI_mass_size_relation
 
 
-class HiDisk(object):
+class HIDisk(object):
     """
-    This class creates an axisymmetric neutral hydrogen (HI) disk. 
+    This class creates an axisymmetric neutral atomic hydrogen (HI) disk. 
     
     The radial mass density profile is based on the Obreschkow et al. (2009) model, however in constrast to Obreschkow (2009), the exponential scale radius (rdisk) is set under the constraint of the HI mass-size relation, see Blecher et al. (2019) for details.
     
-    Note that the total length of the coordinate grid is set dynamically based on the size of the HI disk. 
+    Note that the angular length of the coordinate grid is set dynamically based on the size of the HI disk. 
 
     Attributes
     ----------
@@ -88,7 +88,7 @@ class HiDisk(object):
             redshift of source
         rcmol : float
             A quantity which determines the ratio of H2/HI in the Obreschkow (2009) model
-        inclination_degrees : float
+        inclination_angle_degrees : float
             HI disk inclination angle in degrees [0, 90]
         position_angle_degrees : float
             HI disk position angle in degrees [0, 180]
@@ -97,7 +97,7 @@ class HiDisk(object):
         grid_scaling_factor : float
             Sets grid_length via grid_length = grid_scaling_factor * rdisk
         """
-        self.logger = logging.getLogger('tblens.HiDisk.HiDisk')
+        self._logger = logging.getLogger('tblens.HIDisk.HIDisk')
         self.rcmol = rcmol
         self.smoothing_height_pix = smoothing_height_pix
         self.log10_mhi = log10_mhi
@@ -112,7 +112,7 @@ class HiDisk(object):
         self.grid_length_arcsec = self.set_grid_length(grid_scaling_factor)
         self.pixel_scale_arcsec = self.grid_length_arcsec / self.n_pix
 
-        self.x, self.y, self.r = self.create_grid()
+        self.create_grid()
         self.disk_3d = self.create_face_on_disk()
         self.disk_3d = rotate(self.disk_3d, inclination_angle_degrees, axes=(2, 0), reshape=False)
         self.disk_3d = rotate(self.disk_3d, position_angle_degrees, axes=(1,0),reshape=False)
@@ -123,9 +123,9 @@ class HiDisk(object):
         """Sets grid length relative to the size of the HI disk"""
         grid_length_arcsec = np.ceil(grid_scaling_factor * self.rdisk_arcsec)
         if grid_scaling_factor < 6:
-            self.logger.warning('grid_scaling_factor < 6, the full HI distribution may not be captured.')
+            self._logger.warning('grid_scaling_factor < 6, the full HI distribution may not be captured.')
         elif grid_scaling_factor > 20:
-            self.logger.warning('grid_scaling_factor > 20, the HI distribution may suffer from pixelisation errors.')
+            self._logger.warning('grid_scaling_factor > 20, the HI distribution may suffer from pixelisation errors.')
 
         return grid_length_arcsec
 
@@ -171,10 +171,9 @@ class HiDisk(object):
 
     def create_grid(self):
         """Creates standard 2D coordinate arrays"""
-        y, x = np.mgrid[-self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix,
+        self.y, self.x = np.mgrid[-self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix,
                                   -self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix]
-        r = np.sqrt(self.x * self.x + self.y * self.y)
-        return x, y, r
+        self.r = np.sqrt(self.x * self.x + self.y * self.y)
 
     def create_face_on_disk(self):
         """Creates face-on 3D HI disk, density ref : Obreschkow (2009)"""
