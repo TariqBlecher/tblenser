@@ -20,15 +20,13 @@ class HIDisk(object):
     Attributes
     ----------
     mh : float
-        Total hydrogen mass of galaxy (atomic and molecular)
+        Total hydrogen mass of galaxy (atomic plus molecular)
     n_pix : int
         Number of pixels spanning the length of the grid
     log10_mhi : float
         log (base 10) of the total HI mass
     rcmol : float
         A quantity which determines the ratio of H2/HI in the Obreschkow (2009) model
-    smoothing_height_pix : float 
-        Gaussian smoothing height of disk (0. for thin disk, i.e. no smoothing)
     r1_pc : float
         Radius at which HI density reaches 1 Msun pc^(-2)
     rdisk_arcsec : float
@@ -99,7 +97,6 @@ class HIDisk(object):
         """
         self._logger = logging.getLogger('tblens.HIDisk.HIDisk')
         self.rcmol = rcmol
-        self.smoothing_height_pix = smoothing_height_pix
         self.log10_mhi = log10_mhi
         self.z_src = z_src
         self.n_pix = n_pix
@@ -113,7 +110,7 @@ class HIDisk(object):
         self.pixel_scale_arcsec = self.grid_length_arcsec / self.n_pix
 
         self.create_grid()
-        self.disk_3d = self.create_face_on_disk()
+        self.disk_3d = self.create_face_on_disk(smoothing_height_pix)
         self.disk_3d = rotate(self.disk_3d, inclination_angle_degrees, axes=(2, 0), reshape=False)
         self.disk_3d = rotate(self.disk_3d, position_angle_degrees, axes=(1,0),reshape=False)
         self.disk_2d = np.sum(self.disk_3d, axis=2)
@@ -175,13 +172,13 @@ class HIDisk(object):
                                   -self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix]
         self.r = np.sqrt(self.x * self.x + self.y * self.y)
 
-    def create_face_on_disk(self):
+    def create_face_on_disk(self, smoothing_height_pix):
         """Creates face-on 3D HI disk, density ref : Obreschkow (2009)"""
         twod_density = np.exp(- self.r / self.rdisk_arcsec) / (1 + self.rcmol * np.exp(-1.6 * self.r / self.rdisk_arcsec))
         disk_3d = np.zeros((self.n_pix, self.n_pix, self.n_pix))
         disk_3d[:, :, int(self.n_pix / 2)] = twod_density
-        if self.smoothing_height_pix:
-            disk_3d = gaussian_filter1d(disk_3d, self.smoothing_height_pix, axis=2)
+        if smoothing_height_pix:
+            disk_3d = gaussian_filter1d(disk_3d, smoothing_height_pix, axis=2)
         return disk_3d
 
     def update_fits_header(self, hdr, ra_dec_deg):
