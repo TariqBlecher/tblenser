@@ -13,7 +13,8 @@ class HIDisk(object):
     """
     This class creates an axisymmetric neutral atomic hydrogen (HI) disk. 
     
-    The radial mass density profile is based on the Obreschkow et al. (2009) model, however in constrast to Obreschkow (2009), the exponential scale radius (rdisk) is set under the constraint of the HI mass-size relation, see Blecher et al. (2019) for details.
+    The radial mass density profile is based on the Obreschkow et al. (2009) model, however in constrast to Obreschkow (2009), the exponential scale
+    radius (rdisk) is set under the constraint of the HI mass-size relation, see Blecher et al. (2019) for details.
     
     Note that the angular length of the coordinate grid is set dynamically based on the size of the HI disk. 
 
@@ -138,12 +139,15 @@ class HIDisk(object):
     def solve_for_rdisk(self, log_rdisk_pc_range=(2, 6)):
         """This function finds a value of rdisk which satisfies the HI-mass size relation.
 
-            Note that in the Obreschkow (2009) model, there can be two numerical solutions for rdisk. The first solution puts most of the HI mass at r<R1 while the second solution puts most of the HI mass at r>R1. As the second scenario is unphysical, we choose the first solution to rdisk.
+            Note that in the Obreschkow (2009) model, there can be two numerical solutions for rdisk. The first solution puts most of the HI mass at r<R1,
+            while the second solution puts most of the HI mass at r>R1. As the second scenario is unphysical, we choose the first solution to rdisk.
 
             Parameters
             ----------
             log_rdisk_pc_range : tuple
-                lower and upper bounds to search for rdisk solution, syntax : (lower, upper). The current default values are (100 pc, 100 kpc) which should be fine for all physically possible HI disks. However, if there is a crash with 'IndexError: list index out of range', it means that a minimum for rdisk is not found within bounds.
+                lower and upper bounds to search for rdisk solution, syntax : (lower, upper). The current default values are (100 pc, 100 kpc) which
+                should be fine for all physically possible HI disks. However, if there is a crash with 'IndexError: list index out of range', 
+                it means that a minimum for rdisk is not found within bounds.
 
             Returns
             -------
