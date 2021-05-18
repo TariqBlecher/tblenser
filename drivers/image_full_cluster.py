@@ -66,7 +66,7 @@ for src_ind in src_indices:
         # # HI disk creation
         source_coord_deg = defmap.calc_source_position(coords_deg[:, src_ind], z)
 
-        hidisk = HIDisk(rcmol=rcmol, smoothing_height_pix=False, inclination_angle_degrees=inclination_angle_deg, position_angle_degrees=position_angle_deg, log10_mhi=mhi, z_src=z, grid_scaling_factor=12)
+        hidisk = HIDisk(rcmol=rcmol, inclination_angle_degrees=inclination_angle_deg, position_angle_degrees=position_angle_deg, log10_mhi=mhi, z_src=z, grid_scaling_factor=12)
 
         hidisk.writeto_fits('hidisk_twodisk_%04d_%04d.fits' % (src_ind, sample), defmap.header, source_coord_deg,
                             flux_norm=True)

@@ -73,8 +73,7 @@ class HIDisk(object):
     writeto_fits(name, hdr, ra_dec_deg, flux_norm=False)
         Writes HI disk to fits file
     """
-    def __init__(self, n_pix=100, log10_mhi=9, z_src=0.4, rcmol=1., inclination_angle_degrees=0, position_angle_degrees=0,
-                 smoothing_height_pix=0, grid_scaling_factor=10):
+    def __init__(self, n_pix=100, log10_mhi=9, z_src=0.4, rcmol=1., inclination_angle_degrees=0, position_angle_degrees=0, grid_scaling_factor=10):
         """
         Parameters
         ----------
@@ -90,8 +89,6 @@ class HIDisk(object):
             HI disk inclination angle in degrees [0, 90]
         position_angle_degrees : float
             HI disk position angle in degrees [0, 180]
-        smoothing_height_pix : float 
-            Gaussian smoothing height of disk (0. for thin disk, i.e. no smoothing)
         grid_scaling_factor : float
             Sets grid_length via grid_length = grid_scaling_factor * rdisk
         """
@@ -110,7 +107,7 @@ class HIDisk(object):
         self.pixel_scale_arcsec = self.grid_length_arcsec / self.n_pix
 
         self.create_grid()
-        self.disk_3d = self.create_face_on_disk(smoothing_height_pix)
+        self.disk_3d = self.create_face_on_disk()
         self.disk_3d = rotate(self.disk_3d, inclination_angle_degrees, axes=(2, 0), reshape=False)
         self.disk_3d = rotate(self.disk_3d, position_angle_degrees, axes=(1,0),reshape=False)
         self.disk_2d = np.sum(self.disk_3d, axis=2)
@@ -172,13 +169,11 @@ class HIDisk(object):
                                   -self.grid_length_arcsec / 2:self.grid_length_arcsec / 2:1j * self.n_pix]
         self.r = np.sqrt(self.x * self.x + self.y * self.y)
 
-    def create_face_on_disk(self, smoothing_height_pix):
+    def create_face_on_disk(self):
         """Creates face-on 3D HI disk, density ref : Obreschkow (2009)"""
         twod_density = np.exp(- self.r / self.rdisk_arcsec) / (1 + self.rcmol * np.exp(-1.6 * self.r / self.rdisk_arcsec))
         disk_3d = np.zeros((self.n_pix, self.n_pix, self.n_pix))
         disk_3d[:, :, int(self.n_pix / 2)] = twod_density
-        if smoothing_height_pix:
-            disk_3d = gaussian_filter1d(disk_3d, smoothing_height_pix, axis=2)
         return disk_3d
 
     def update_fits_header(self, hdr, ra_dec_deg):
